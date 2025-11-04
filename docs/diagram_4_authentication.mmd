@@ -1,0 +1,58 @@
+---
+title: "Diagramma 4 - Modello Dati Autenticazione"
+---
+
+classDiagram
+    %% Focus su autenticazione e modelli utente
+    
+    class MarkunoApiTools {
+        <<Tool>>
+        -string _authToken$
+        -User _currentUser$
+        
+        +Login(username, password) Task~string~
+        +Logout() Task~string~
+        +CheckAuthStatus() string
+        -AutoLoginIfNeeded() Task~bool~
+    }
+    
+    class User {
+        <<Model>>
+        +Id: int
+        +Name: string
+        +Email: string
+        +Level: int
+        +Token: string
+        +Ruoli: string
+        +Nome: string
+        +Cognome: string
+    }
+    
+    class LoginResponse {
+        <<DTO>>
+        +Time: int
+        +Data: LoginData
+        +Path: string
+    }
+    
+    class LoginData {
+        <<DTO>>
+        +User: User
+        +Config: Dictionary
+    }
+    
+    class MarkunoAPI {
+        <<External>>
+        POST /api/login
+    }
+    
+    LoginResponse *-- LoginData : contiene
+    LoginData *-- User : contiene
+    
+    MarkunoApiTools ..> MarkunoAPI : POST credentials
+    MarkunoAPI ..> LoginResponse : risponde
+    MarkunoApiTools ..> User : memorizza
+    
+    note for MarkunoApiTools "Flusso Login:\n1. Riceve username/password\n2. POST a /api/login\n3. Riceve LoginResponse\n4. Estrae e salva Token\n5. Memorizza User corrente\n6. Usa Token per richieste successive"
+    
+    note for User "Campi chiave:\n- Token: per autenticazione\n- Level: livello autorizzazione\n- Ruoli: permessi specifici"

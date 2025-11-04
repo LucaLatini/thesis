@@ -1,0 +1,149 @@
+---
+title: "Sequence Diagram 5 - Gestione Errori e Casi Limite"
+---
+
+sequenceDiagram
+    actor User as 👤 AI Assistant
+    participant MCP as MarkunoApiTools
+    participant HTTP as HttpClient
+    participant API as 🌐 Markuno API
+    participant SR as SignalRService
+    
+    Note over User,SR: SCENARIO 1: TOKEN SCADUTO DURANTE OPERAZIONE
+    
+    User->>+MCP: GetProjects(onlyMy: true)
+    
+    MCP->>MCP: Verifica _authToken presente
+    Note over MCP: Token presente ma potrebbe essere scaduto
+    
+    MCP->>+HTTP: POST /muconf/plist<br/>Authorization: Bearer {old_token}
+    HTTP->>+API: Request con token scaduto
+    
+    API->>API: Verifica token JWT
+    API->>API: Token scaduto!
+    API-->>-HTTP: 401 Unauthorized<br/>{error: "Token expired"}
+    HTTP-->>-MCP: StatusCode: 401
+    
+    MCP->>MCP: Detect error 401
+    
+    rect rgb(255, 248, 240)
+        Note over MCP: Strategia: Informa l'utente per nuovo login
+        MCP-->>-User: ⚠️ Token scaduto<br/>{<br/>  success: false,<br/>  error: "Authentication required",<br/>  statusCode: 401,<br/>  hint: "Effettua nuovo login"<br/>}
+    end
+    
+    User->>+MCP: Login(username, password)
+    Note over MCP: Nuovo login eseguito...
+    MCP-->>-User: ✅ Nuovo token ottenuto
+    
+    Note over User,SR: SCENARIO 2: PROGETTO NON TROVATO
+    
+    User->>+MCP: OpenProject("Progetto Inesistente", receiverId)
+    
+    MCP->>+API: POST /muconf/plist
+    API-->>-MCP: Lista progetti
+    
+    MCP->>MCP: Cerca "Progetto Inesistente"<br/>in lista progetti (case-insensitive)
+    
+    MCP->>MCP: FirstOrDefault() → null
+    
+    rect rgb(255, 240, 240)
+        Note over MCP: Progetto non trovato
+        MCP->>MCP: Prepara lista progetti disponibili<br/>(primi 10 per hint)
+        
+        MCP-->>-User: ❌ Progetto non trovato<br/>{<br/>  success: false,<br/>  found: false,<br/>  error: "Progetto 'Progetto Inesistente' non trovato",<br/>  totalProjects: 45,<br/>  availableProjects: [<br/>    "Cucina Milano",<br/>    "Soggiorno Roma",<br/>    "Camera Napoli",<br/>    ...<br/>  ],<br/>  hint: "Verifica il nome o usa GetProjects"<br/>}
+    end
+    
+    Note over User,SR: SCENARIO 3: SIGNALR OFFLINE DURANTE INVIO
+    
+    User->>+MCP: CreateProject(receiverId, "Nuovo Progetto", note)
+    
+    MCP->>+SR: IsConnected
+    SR-->>-MCP: false
+    
+    rect rgb(255, 240, 240)
+        Note over MCP: SignalR non disponibile
+        MCP-->>-User: ❌ SignalR non connesso<br/>{<br/>  success: false,<br/>  error: "SignalR connection not active",<br/>  details: "Assicurati che il server SignalR sia in esecuzione",<br/>  hint: "Verifica con CheckSignalRStatus()"<br/>}
+    end
+    
+    User->>+MCP: CheckSignalRStatus()
+    MCP->>SR: IsConnected, ConnectionState, ConnectionId
+    SR-->>MCP: false, Disconnected, null
+    
+    MCP-->>-User: ℹ️ Status SignalR<br/>{<br/>  success: false,<br/>  isConnected: false,<br/>  state: "Disconnected",<br/>  connectionId: null,<br/>  hint: "Avvia server SignalR o verifica configurazione"<br/>}
+    
+    Note over User,SR: SCENARIO 4: ERRORE API DURANTE ADD ARTICLE
+    
+    User->>+MCP: AddArticle(cod, des, cat, ..., ruleset)
+    
+    MCP->>MCP: Verifica autenticazione OK
+    
+    MCP->>+HTTP: POST /muconf/radd
+    HTTP->>+API: Inserisci articolo
+    
+    API->>API: Valida dati articolo
+    
+    rect rgb(255, 240, 240)
+        Note over API: Errore validazione:<br/>- Categoria non valida<br/>- Dimensioni fuori range<br/>- Articolo già esistente
+        
+        API-->>-HTTP: 400 Bad Request<br/>{<br/>  error: "Invalid category 'xyz'",<br/>  validCategories: ["adm", "arm", ...]<br/>}
+        HTTP-->>-MCP: StatusCode: 400, Body
+    end
+    
+    MCP->>MCP: Detect error 400
+    MCP->>MCP: Parse error response
+    
+    MCP-->>-User: ❌ Errore validazione articolo<br/>{<br/>  success: false,<br/>  error: "Invalid category 'xyz'",<br/>  statusCode: 400,<br/>  details: {validCategories: [...]},<br/>  hint: "Usa SearchCatalogItems per vedere categorie valide"<br/>}
+    
+    Note over User,SR: SCENARIO 5: ERRORE DURANTE APPLICAZIONE VARIANTI
+    
+    User->>+MCP: AddArticle(..., ruleset: [{cod: "invalid", opz: "c.99"}])
+    
+    MCP->>+API: POST /muconf/radd
+    API-->>-MCP: 200 OK {data: {data: "8"}}
+    
+    Note over MCP: Articolo base inserito, rowId = 8
+    
+    MCP->>+API: POST /muconf/rget {id, idr: "8"}
+    API-->>-MCP: Dati riga
+    
+    MCP->>MCP: Modifica pars con ruleset
+    
+    MCP->>+API: POST /muconf/rsave {pars modificato}
+    
+    API->>API: Valida parametri
+    
+    rect rgb(255, 240, 240)
+        Note over API: Errore validazione variante:<br/>- Codice parametro non esistente<br/>- Valore opzione non valido
+        
+        API-->>-MCP: 400 Bad Request<br/>{<br/>  error: "Invalid parameter 'invalid'",<br/>  availableParams: ["str", "fin", "portante"]<br/>}
+    end
+    
+    MCP->>MCP: Detect error in rsave
+    
+    rect rgb(255, 255, 240)
+        Note over MCP: Articolo inserito ma varianti non applicate
+        MCP-->>-User: ⚠️ Articolo inserito, varianti fallite<br/>{<br/>  success: true,<br/>  rowId: 8,<br/>  variantsApplied: false,<br/>  variantsError: "Invalid parameter 'invalid'",<br/>  hint: "Usa GetArticleInfo per vedere parametri disponibili",<br/>  article: {cod, des, ...}<br/>}
+    end
+    
+    Note over User,SR: SCENARIO 6: NETWORK TIMEOUT
+    
+    User->>+MCP: GetProjects()
+    
+    MCP->>+HTTP: POST /muconf/plist
+    HTTP->>+API: Request inviata
+    
+    rect rgb(255, 240, 240)
+        Note over API: Server lento o sovraccarico
+        API->>API: Elaborazione lunga...
+        
+        Note over HTTP: Timeout dopo 30s
+        HTTP--xAPI: Request timeout
+    end
+    
+    HTTP-->>-MCP: TaskCanceledException<br/>"Request timeout"
+    
+    MCP->>MCP: Catch exception
+    
+    MCP-->>-User: ❌ Timeout operazione<br/>{<br/>  success: false,<br/>  error: "Request timeout",<br/>  details: "Il server non ha risposto entro 30s",<br/>  hint: "Riprova o verifica connettività"<br/>}
+    
+    Note over User,SR: GESTIONE ERRORI ROBUSTA CON FEEDBACK UTILE

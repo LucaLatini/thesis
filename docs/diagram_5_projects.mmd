@@ -1,0 +1,78 @@
+---
+title: "Diagramma 5 - Modello Dati Progetti"
+---
+
+classDiagram
+    %% Focus su gestione progetti
+    
+    class MarkunoApiTools {
+        <<Tool>>
+        +GetProjects(onlyMy) Task~string~
+        +ProjectExists(identifier, matchById) Task~string~
+        +CreateProject(receiverId, des, note) Task~string~
+        +OpenProject(projectName, receiverId) Task~string~
+    }
+    
+    class Project {
+        <<Model>>
+        +Id: int
+        +Des: string
+        +Status: string
+        +DtCrea: double
+        +DtMod: double
+        +Importo: double
+        +User: User
+        +Note: string
+        +Cognome: string
+        +Nome: string
+        +Email: string
+    }
+    
+    class ProjectsResponse {
+        <<DTO>>
+        +Level: int
+        +Time: int
+        +Data: ProjectsData
+        +Path: string
+    }
+    
+    class ProjectsData {
+        <<DTO>>
+        +HasMore: bool
+        +Data: List~Project~
+        +Fields: List~ProjectField~
+    }
+    
+    class ProjectField {
+        <<DTO>>
+        +Cod: string
+        +Des: string
+        +Type: string
+        +Visible: bool
+        +Sort: bool
+    }
+    
+    class User {
+        <<Model>>
+        +Id: int
+        +Name: string
+        +Level: int
+    }
+    
+    class MarkunoAPI {
+        <<External>>
+        POST /muconf/plist
+    }
+    
+    ProjectsResponse *-- ProjectsData : contiene
+    ProjectsData *-- Project : contiene 0..*
+    ProjectsData *-- ProjectField : contiene 0..*
+    Project --> User : owner 0..1
+    
+    MarkunoApiTools --> MarkunoAPI : richiesta progetti
+    MarkunoAPI ..> ProjectsResponse : risponde
+    MarkunoApiTools ..> Project : gestisce
+    
+    note for MarkunoApiTools "Operazioni Progetti:\n- GetProjects: lista progetti\n- ProjectExists: verifica esistenza\n- CreateProject: crea via SignalR\n- OpenProject: apre via SignalR"
+    
+    note for Project "Informazioni progetto:\n- Dati anagrafici cliente\n- Timestamp creazione/modifica\n- Stato e importo\n- Owner (utente)"

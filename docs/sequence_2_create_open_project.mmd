@@ -1,0 +1,110 @@
+---
+title: "Sequence Diagram 2 - Flusso Completo: Creazione e Apertura Progetto"
+---
+
+sequenceDiagram
+    actor User as 👤 AI Assistant
+    participant MCP as MarkunoApiTools
+    participant SR as SignalRService
+    participant Hub as HubConnection
+    participant SRHub as 🔌 SignalR Hub
+    participant C3D as 🎨 Configurator 3D
+    participant API as 🌐 Markuno API
+    
+    Note over User,API: FASE 1: CREAZIONE PROGETTO VIA SIGNALR
+    
+    User->>+MCP: CreateProject(receiverId, des, note, open)
+    
+    MCP->>SR: Verifica IsConnected
+    SR-->>MCP: true/false
+    
+    alt SignalR non connesso
+        MCP-->>User: ❌ Error: SignalR non connesso
+    else SignalR connesso
+        
+        MCP->>MCP: Valida parametri<br/>(receiverId, des obbligatori)
+        
+        MCP->>MCP: Costruisci Message<br/>{<br/>  action: "create",<br/>  params: {des, note, open}<br/>}
+        
+        MCP->>+SR: CallHubMethodAsync("SendMessage",<br/>receiverId, message)
+        SR->>+Hub: SendCoreAsync("SendMessage", [receiverId, message])
+        Hub->>+SRHub: Invia messaggio via WebSocket
+        SRHub->>+C3D: ReceiveMessage(message)
+        
+        Note over C3D: Client riceve comando "create"
+        
+        C3D->>C3D: Mostra dialog creazione progetto<br/>Pre-compila con: des, note
+        
+        rect rgb(240, 255, 240)
+            Note over C3D: Utente conferma creazione nel client 3D
+            C3D->>C3D: POST /muconf/pcreate (lato client)
+        end
+        
+        C3D->>-SRHub: Conferma creazione<br/>{success: true, projectId: 14351}
+        SRHub-->>-Hub: Risposta via WebSocket
+        Hub-->>-SR: Messaggio ricevuto
+        SR-->>-MCP: true (invio riuscito)
+        
+        alt open = true
+            Note over C3D: Client apre automaticamente il progetto
+            C3D->>C3D: Carica progetto 14351 nel viewer 3D
+        end
+        
+        MCP-->>-User: ✅ Richiesta creazione inviata<br/>{success: true, des, receiverId}
+    end
+    
+    Note over User,API: FASE 2: APERTURA PROGETTO ESISTENTE
+    
+    User->>+MCP: OpenProject(projectName: "Cucina Milano", receiverId)
+    
+    MCP->>MCP: Verifica _authToken
+    
+    alt Token assente
+        MCP->>MCP: AutoLoginIfNeeded()
+    end
+    
+    Note over MCP,API: Sub-flusso: Ricerca progetto per nome
+    
+    MCP->>+API: POST /muconf/plist<br/>{onlymy: "1"}
+    API-->>-MCP: Lista progetti
+    
+    MCP->>MCP: Cerca progetto case-insensitive<br/>projects.FirstOrDefault(<br/>  p => p.Des.EqualsIgnoreCase("Cucina Milano")<br/>)
+    
+    alt Progetto non trovato
+        MCP-->>User: ❌ Progetto non trovato<br/>{found: false, availableProjects: [primi 10]}
+    else Progetto trovato
+        Note over MCP: Trovato: Project {id: 14351, des: "Cucina Milano"}
+        
+        MCP->>SR: Verifica IsConnected
+        
+        alt SignalR non connesso
+            MCP-->>User: ❌ SignalR offline<br/>{found: true, project: {...}}
+        else SignalR connesso
+            
+            MCP->>MCP: Costruisci Message<br/>{<br/>  action: "open",<br/>  name: "14351"  ← ID come stringa!<br/>}
+            
+            MCP->>+SR: CallHubMethodAsync("SendMessage",<br/>receiverId, message)
+            SR->>+Hub: SendCoreAsync("SendMessage", [receiverId, message])
+            Hub->>+SRHub: Invia via WebSocket
+            SRHub->>+C3D: ReceiveMessage({action: "open", name: "14351"})
+            
+            Note over C3D: Client riceve comando "open"
+            
+            C3D->>C3D: Parse message.name → projectId = 14351
+            C3D->>+API: GET /muconf/pget?id=14351
+            API-->>-C3D: Dati completi progetto
+            
+            C3D->>C3D: Carica geometrie 3D
+            C3D->>C3D: Carica articoli del progetto
+            C3D->>C3D: Renderizza scene 3D
+            
+            C3D->>-SRHub: Conferma caricamento<br/>{loaded: true, projectId: 14351}
+            SRHub-->>-Hub: Notifica
+            Hub-->>-SR: Risposta
+            SR-->>-MCP: true
+            
+            Note over C3D: Progetto visualizzato nel configurator 3D
+            
+            MCP-->>-User: ✅ Progetto aperto<br/>{<br/>  success: true,<br/>  project: {id: 14351, name: "Cucina Milano", ...}<br/>}
+        end
+    end

@@ -1,0 +1,87 @@
+---
+title: "Sequence Diagram 1 - Flusso Completo: Login e Recupero Progetti"
+---
+
+sequenceDiagram
+    actor User as 👤 AI Assistant
+    participant MCP as MarkunoApiTools
+    participant Config as IConfiguration
+    participant HTTP as HttpClient
+    participant API as 🌐 Markuno API
+    participant SR as SignalRService
+    
+    Note over User,SR: FASE 1: AUTENTICAZIONE
+    
+    User->>+MCP: Login(username, password)
+    
+    alt Username/Password forniti
+        Note over MCP: Usa credenziali fornite
+    else Credenziali omesse
+        MCP->>Config: Leggi DefaultUser/DefaultPassword
+        Config-->>MCP: Credenziali da config
+        Note over MCP: Usa credenziali da appsettings.json
+    end
+    
+    MCP->>MCP: Prepara body JSON<br/>{name, password}
+    MCP->>+HTTP: POST /api/login
+    HTTP->>+API: Request con credenziali
+    
+    alt Credenziali valide
+        API-->>-HTTP: 200 OK<br/>LoginResponse {user, token}
+        HTTP-->>-MCP: LoginResponse
+        
+        MCP->>MCP: Estrai token<br/>Salva in _authToken (static)
+        MCP->>MCP: Salva User in _currentUser (static)
+        
+        Note over MCP: Token salvato per richieste future
+        
+        MCP->>+SR: SendNotificationAsync("Login effettuato", "success")
+        SR->>SR: Verifica connessione SignalR
+        alt SignalR connesso
+            SR->>API: Notifica via SignalR Hub
+        end
+        SR-->>-MCP: Notifica inviata
+        
+        MCP-->>-User: ✅ Login riuscito<br/>{username, userId, level, token}
+        
+    else Credenziali invalide
+        API-->>HTTP: 401 Unauthorized
+        HTTP-->>MCP: Errore 401
+        MCP-->>User: ❌ Login fallito<br/>Credenziali non valide
+    end
+    
+    Note over User,SR: FASE 2: RECUPERO PROGETTI
+    
+    User->>+MCP: GetProjects(onlyMy: true)
+    
+    MCP->>MCP: Verifica _authToken
+    
+    alt Token presente
+        Note over MCP: Usa token esistente
+    else Token assente
+        MCP->>MCP: AutoLoginIfNeeded()
+        Note over MCP: Tenta login automatico<br/>con credenziali da config
+    end
+    
+    MCP->>MCP: Prepara body<br/>{onlymy: "1"}
+    MCP->>+HTTP: POST /muconf/plist<br/>Header: Authorization Bearer {token}
+    HTTP->>+API: Request autenticata
+    
+    alt Token valido
+        API->>API: Filtra progetti per utente
+        API-->>-HTTP: 200 OK<br/>ProjectsResponse {data: [projects]}
+        HTTP-->>-MCP: Lista progetti
+        
+        MCP->>MCP: Deserializza ProjectsResponse
+        MCP->>MCP: Estrai array di Project
+        MCP->>MCP: Mappa progetti in formato JSON<br/>{id, name, status, importo, ...}
+        
+        MCP-->>-User: ✅ JSON con lista progetti<br/>{success: true, count: N, projects: [...]}
+        
+    else Token scaduto/invalido
+        API-->>HTTP: 401 Unauthorized
+        HTTP-->>MCP: Errore 401
+        MCP-->>User: ⚠️ Token scaduto<br/>Effettua nuovo login
+    end
+
+    Note over User,SR: Il token rimane valido per richieste successive

@@ -1,0 +1,53 @@
+---
+title: "Diagramma 2 - Layer di Configurazione"
+---
+
+classDiagram
+    %% Focus su Configurazione e Setup
+    
+    class Program {
+        <<Entry Point>>
+        +Main(args)
+        -ConfigureServices()
+        -ConfigureAppConfiguration()
+    }
+    
+    class AppSettings {
+        <<Configuration>>
+        +BaseUrl: string
+        +MarkunoCredentials
+        +SignalR
+    }
+    
+    class MarkunoCredentials {
+        <<Config>>
+        +DefaultUser: string
+        +DefaultPassword: string
+    }
+    
+    class SignalRConfig {
+        <<Config>>
+        +HubUrl: string
+        +AllowInsecure: bool
+    }
+    
+    class IServiceCollection {
+        <<Framework>>
+        Dependency Injection
+    }
+    
+    class IConfiguration {
+        <<Framework>>
+        Configuration System
+    }
+    
+    AppSettings *-- MarkunoCredentials : contiene
+    AppSettings *-- SignalRConfig : contiene
+    
+    Program ..> AppSettings : legge
+    Program ..> IServiceCollection : registra servizi
+    Program ..> IConfiguration : carica configurazione
+    
+    note for AppSettings "Configurazione centralizzata:\n- URL API Markuno\n- Credenziali default\n- Impostazioni SignalR"
+    
+    note for Program "Responsabilità:\n1. Carica appsettings.json\n2. Registra HttpClient\n3. Registra SignalRService (Singleton)\n4. Registra MarkunoApiTools\n5. Configura MCP Server"

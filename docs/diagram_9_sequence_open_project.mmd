@@ -1,0 +1,49 @@
+---
+title: "Diagramma 9 - Flusso Completo: Apertura Progetto"
+---
+
+sequenceDiagram
+    participant AI as AI Assistant
+    participant MCP as MarkunoApiTools
+    participant API as Markuno API
+    participant SR as SignalRService
+    participant Hub as SignalR Hub
+    participant C3D as Configurator 3D
+
+    AI->>MCP: OpenProject(projectName, receiverId)
+    
+    Note over MCP: 1. Verifica autenticazione
+    alt Non autenticato
+        MCP->>MCP: AutoLoginIfNeeded()
+        MCP->>API: POST /api/login
+        API-->>MCP: Token
+    end
+    
+    Note over MCP: 2. Recupera lista progetti
+    MCP->>API: POST /muconf/plist<br/>(onlymy: "1")
+    API-->>MCP: ProjectsResponse<br/>{data: {data: [Project...]}}
+    
+    Note over MCP: 3. Cerca progetto per nome<br/>(case-insensitive)
+    
+    alt Progetto non trovato
+        MCP-->>AI: Error: Progetto non trovato<br/>(lista primi 10 disponibili)
+    else Progetto trovato
+        Note over MCP: 4. Verifica connessione SignalR
+        alt SignalR non connesso
+            MCP-->>AI: Error: SignalR non attivo
+        else SignalR connesso
+            Note over MCP: 5. Prepara messaggio
+            Note over MCP: Message:<br/>action = "open"<br/>name = projectId (string)
+            
+            MCP->>SR: CallHubMethodAsync("SendMessage",<br/>receiverId, message)
+            SR->>Hub: SendMessage(receiverId, message)
+            Hub->>C3D: ReceiveMessage({action: "open",<br/>name: "14351"})
+            
+            Note over C3D: 6. Carica progetto<br/>nel configurator 3D
+            
+            C3D-->>Hub: Conferma caricamento
+            Hub-->>SR: Notifica
+            
+            MCP-->>AI: Success JSON<br/>(dettagli progetto)
+        end
+    end

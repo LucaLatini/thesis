@@ -1,0 +1,48 @@
+---
+title: "Diagramma 1 - Architettura di Alto Livello"
+---
+
+classDiagram
+    %% Vista Semplificata - Solo componenti principali
+    
+    class Program {
+        <<Entry Point>>
+        +Main()
+    }
+    
+    class MarkunoApiTools {
+        <<MCP Server Tools>>
+        +Login()
+        +GetProjects()
+        +AddArticle()
+        +CreateProject()
+    }
+    
+    class SignalRService {
+        <<Service>>
+        +ConnectAsync()
+        +SendMessage()
+        +ReceiveMessage()
+    }
+    
+    class MarkunoAPI {
+        <<External API>>
+        REST Endpoints
+    }
+    
+    class Configurator3D {
+        <<External Client>>
+        3D Configurator
+    }
+    
+    Program --> MarkunoApiTools : registra
+    Program --> SignalRService : configura
+    MarkunoApiTools --> SignalRService : usa
+    MarkunoApiTools --> MarkunoAPI : HTTP/REST
+    SignalRService --> Configurator3D : SignalR/WebSocket
+    
+    note for Program "Entry point:\nConfigura DI,\nMCP Server,\nServizi"
+    
+    note for MarkunoApiTools "MCP Tools:\nEspone funzionalità\nall'AI Assistant"
+    
+    note for SignalRService "Comunicazione\nreal-time con\nconfigurator 3D"

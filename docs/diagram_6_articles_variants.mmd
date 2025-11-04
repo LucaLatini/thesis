@@ -1,0 +1,49 @@
+---
+title: "Diagramma 6 - Gestione Articoli e Varianti"
+---
+
+classDiagram
+    %% Focus su articoli, catalogo e varianti
+    
+    class MarkunoApiTools {
+        <<Tool>>
+        +AddArticle(...) Task~string~
+        +GetArticleInfo(catalogId, articleName) Task~string~
+        +GetVariants(catalogId, variantNames) Task~string~
+        +SearchCatalogItems(catalogo, modello, categoria) Task~string~
+    }
+    
+    class RuleSetItem {
+        <<Model>>
+        +Cod: string
+        +Opz: string
+        +IsDef: int
+        +IsLock: int
+    }
+    
+    class VariantOptions {
+        <<Model>>
+        +Id: string
+        +Name: List~string~
+        +Options: Dictionary~string,string~
+    }
+    
+    class MarkunoAPI {
+        <<External>>
+        POST /muconf/radd
+        POST /muconf/rget
+        POST /muconf/rsave
+        POST /mucalls/getinfo
+        POST /mucalls/getvariant
+        POST /mucalls/search
+    }
+    
+    MarkunoApiTools ..> RuleSetItem : usa per varianti
+    MarkunoApiTools ..> VariantOptions : usa per configurazione
+    MarkunoApiTools --> MarkunoAPI : gestione catalogo
+    
+    note for RuleSetItem "Regola/Variante articolo:\n- Cod: parametro (es. 'str', 'fin')\n- Opz: valore (es. 'c.01', 'm.02')\n- IsDef: se è default\n- IsLock: se bloccato"
+    
+    note for VariantOptions "Opzioni varianti:\n- Id: catalogo (es. 'adm')\n- Name: attributi interessati\n- Options: mappa chiave-valore"
+    
+    note for MarkunoApiTools "Flusso AddArticle:\n1. POST /muconf/radd\n2. Riceve ID riga\n3. Se ruleset: GET /muconf/rget\n4. Modifica campo pars\n5. POST /muconf/rsave\n6. Notifica via SignalR"

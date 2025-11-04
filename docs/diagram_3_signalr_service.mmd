@@ -1,0 +1,54 @@
+---
+title: "Diagramma 3 - SignalR Service Layer"
+---
+
+classDiagram
+    %% Focus sul servizio SignalR
+    
+    class SignalRService {
+        <<Service>>
+        -HubConnection _hubConnection
+        -ILogger _logger
+        -string _configuredUrl
+        -bool _isConnected
+        -List~Action~ _receiveHandlers
+        
+        +SignalRService(config, logger)
+        +ConnectAsync() Task~bool~
+        +SendCommandAsync(cmd, data) Task~bool~
+        +CallHubMethodAsync(method, args) Task~bool~
+        +OnReceiveMessage(handler) void
+        +IsConnected bool
+        +ConnectionId string
+        
+        -TryBuildAndStartConnectionAsync()
+        -RegisterReceiveHandlers()
+        -EnsureConnectedAsync()
+    }
+    
+    class HubConnection {
+        <<SignalR Client>>
+        +StartAsync()
+        +InvokeAsync()
+        +SendAsync()
+        +On()
+    }
+    
+    class SignalRHub {
+        <<External Hub>>
+        +SendMessage(receiverId, message)
+        +ReceiveMessage(senderId, message)
+    }
+    
+    class Configurator3D {
+        <<External Client>>
+        Actions: open, create, list_elements
+    }
+    
+    SignalRService --> HubConnection : gestisce
+    HubConnection --> SignalRHub : connessione WebSocket
+    SignalRHub <--> Configurator3D : comunicazione bidirezionale
+    
+    note for SignalRService "Funzionalità:\n- Riconnessione automatica\n- Tentativi multipli endpoint\n- Gestione eventi connessione\n- Supporto cert self-signed (dev)\n- Handler messaggi in arrivo"
+    
+    note for HubConnection "Lifecycle:\n1. Build con URL\n2. Configure retry policy\n3. Register event handlers\n4. StartAsync()\n5. Mantiene connessione"

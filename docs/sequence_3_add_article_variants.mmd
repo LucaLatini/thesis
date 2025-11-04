@@ -1,0 +1,128 @@
+---
+title: "Sequence Diagram 3 - Flusso Complesso: Aggiunta Articolo con Varianti"
+---
+
+sequenceDiagram
+    actor User as 👤 AI Assistant
+    participant MCP as MarkunoApiTools
+    participant HTTP as HttpClient
+    participant API as 🌐 Markuno API
+    participant SR as SignalRService
+    participant C3D as 🎨 Configurator 3D
+    
+    Note over User,C3D: FASE 1: INSERIMENTO ARTICOLO BASE
+    
+    User->>+MCP: AddArticle(<br/>  cod: "sptest",<br/>  des: "Scaffale pensile",<br/>  cat: "adm", model: "00", catmer: "01",<br/>  l: 800, a: 360, p: 320,<br/>  ruleset: [<br/>    {cod: "str", opz: "c.01"},  ← Bianco<br/>    {cod: "fin", opz: "m.02"}   ← Rovere<br/>  ],<br/>  receiverId: "abc123"<br/>)
+    
+    MCP->>MCP: Verifica _authToken
+    
+    alt Token assente
+        MCP->>MCP: AutoLoginIfNeeded()
+        MCP->>+API: POST /api/login
+        API-->>-MCP: Token
+        Note over MCP: Token salvato in _authToken
+    end
+    
+    MCP->>MCP: Prepara body JSON articolo base<br/>{<br/>  cod, des, cat, model, catmer,<br/>  l, a, p, tipo: "a",<br/>  ruleset: [...],  ← Inviato ma non applicato ancora<br/>  note: "", rule: ""<br/>}
+    
+    MCP->>+HTTP: POST /muconf/radd<br/>Header: Authorization Bearer {token}
+    HTTP->>+API: Inserisci articolo
+    
+    API->>API: Valida dati articolo
+    API->>API: Inserisci record in DB<br/>project_items table
+    API->>API: Genera ID riga (rowId)
+    
+    API-->>-HTTP: 200 OK<br/>{<br/>  time: 1234567890,<br/>  data: { data: "8" },  ← rowId<br/>  path: "/muconf/radd"<br/>}
+    HTTP-->>-MCP: Response
+    
+    MCP->>MCP: Parse response JSON
+    MCP->>MCP: Estrai rowId dalla risposta<br/>extractedData = "8"
+    
+    Note over MCP: Articolo base inserito, rowId = 8
+    
+    Note over User,C3D: FASE 2: APPLICAZIONE VARIANTI (se ruleset presente)
+    
+    alt ruleset è vuoto o null
+        Note over MCP: Skip applicazione varianti
+        MCP->>MCP: responseObj = {success: true, rowId: 8}
+    else ruleset ha elementi
+        
+        Note over MCP: Applica varianti tramite flusso GET-MODIFY-SAVE
+        
+        rect rgb(255, 248, 240)
+            Note over MCP,API: STEP 2.1: GET - Recupera stato corrente articolo
+            
+            MCP->>+API: POST /muconf/rget<br/>{<br/>  id: projectId,<br/>  idr: "8",  ← rowId appena inserito<br/>  noeval: true<br/>}
+            
+            API->>API: Recupera riga con rowId = 8
+            API->>API: Include campo "pars" (parametri)
+            
+            API-->>-MCP: 200 OK<br/>{<br/>  data: {<br/>    idr: 8,<br/>    cod: "sptest",<br/>    pars: {  ← Parametri correnti<br/>      "str": "m.01",  ← Valore default<br/>      "fin": "m.01",  ← Valore default<br/>      "portante": "1"<br/>    },<br/>    ...<br/>  }<br/>}
+            
+            MCP->>MCP: Parse response.data
+            MCP->>MCP: Estrai campo "pars"
+        end
+        
+        rect rgb(240, 255, 240)
+            Note over MCP: STEP 2.2: MODIFY - Applica ruleset al campo pars
+            
+            loop Per ogni RuleSetItem in ruleset
+                Note over MCP: Item 1: {cod: "str", opz: "c.01"}
+                MCP->>MCP: pars["str"] = "c.01"  ← Modifica colore struttura
+                
+                Note over MCP: Item 2: {cod: "fin", opz: "m.02"}
+                MCP->>MCP: pars["fin"] = "m.02"  ← Modifica finitura
+            end
+            
+            Note over MCP: pars modificato:<br/>{<br/>  "str": "c.01",  ← Aggiornato a Bianco<br/>  "fin": "m.02",  ← Aggiornato a Rovere<br/>  "portante": "1"  ← Non modificato<br/>}
+        end
+        
+        rect rgb(240, 248, 255)
+            Note over MCP,API: STEP 2.3: SAVE - Salva pars modificato
+            
+            MCP->>+API: POST /muconf/rsave<br/>{<br/>  id: projectId,<br/>  idr: "8",<br/>  pars: {<br/>    "str": "c.01",<br/>    "fin": "m.02",<br/>    "portante": "1"<br/>  }<br/>}
+            
+            API->>API: Valida parametri modificati
+            API->>API: Aggiorna campo pars in DB<br/>per rowId = 8
+            API->>API: Ricalcola eventualmente<br/>geometria/prezzo
+            
+            API-->>-MCP: 200 OK<br/>{success: true, updated: true}
+            
+            Note over MCP: Varianti applicate con successo
+        end
+        
+        MCP->>MCP: responseObj = {<br/>  success: true,<br/>  rowId: 8,<br/>  variantsApplied: true,<br/>  variantsCount: 2<br/>}
+    end
+    
+    Note over User,C3D: FASE 3: NOTIFICA CLIENT 3D (se receiverId fornito)
+    
+    alt receiverId fornito
+        MCP->>+SR: CallHubMethodAsync("SendMessage",<br/>  receiverId,<br/>  {action: "open", name: projectId}<br/>)
+        
+        SR->>SR: Verifica connessione
+        
+        alt SignalR connesso
+            SR->>+C3D: SendMessage via SignalR Hub
+            
+            Note over C3D: Client riceve notifica aggiornamento
+            
+            C3D->>+API: GET /muconf/pget?id={projectId}
+            API-->>-C3D: Dati progetto aggiornati<br/>(include nuovo articolo con varianti)
+            
+            C3D->>C3D: Aggiorna vista 3D
+            C3D->>C3D: Renderizza nuovo articolo<br/>con colore Bianco e finitura Rovere
+            
+            C3D-->>-SR: Conferma aggiornamento
+            SR-->>-MCP: true
+            
+            MCP->>MCP: responseObj.notified = true
+        else SignalR non connesso
+            SR-->>MCP: false
+            MCP->>MCP: responseObj.notified = false
+            Note over MCP: Articolo inserito ma client non notificato
+        end
+    end
+    
+    MCP-->>-User: ✅ JSON Response<br/>{<br/>  success: true,<br/>  rowId: 8,<br/>  article: {cod: "sptest", des: "Scaffale pensile"},<br/>  variantsApplied: true,<br/>  variants: [<br/>    {cod: "str", opz: "c.01", description: "Bianco"},<br/>    {cod: "fin", opz: "m.02", description: "Rovere"}<br/>  ],<br/>  notified: true<br/>}
+    
+    Note over User,C3D: Articolo inserito nel progetto con varianti applicate<br/>e visualizzato nel configurator 3D

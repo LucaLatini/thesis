@@ -1,0 +1,170 @@
+---
+title: "Sequence Diagram 4 - Comunicazione Bidirezionale SignalR"
+---
+
+sequenceDiagram
+    actor User as 👤 AI Assistant
+    participant MCP as MarkunoApiTools
+    participant SR as SignalRService
+    participant Hub as HubConnection
+    participant SRHub as 🔌 SignalR Hub
+    participant C3D as 🎨 Configurator 3D
+    
+    Note over User,C3D: FASE 1: INIZIALIZZAZIONE CONNESSIONE SIGNALR
+    
+    User->>+MCP: CheckSignalRStatus()
+    MCP->>+SR: IsConnected
+    SR-->>-MCP: false
+    MCP-->>-User: ❌ SignalR non connesso
+    
+    Note over SR: Avvio connessione
+    
+    SR->>+SR: ConnectAsync()
+    
+    loop Tentativo multipli endpoint
+        SR->>SR: TryBuildAndStartConnectionAsync()
+        
+        alt Tentativo 1: URL configurato
+            SR->>SR: Build HubConnection con<br/>"https://localhost:7193"
+            SR->>+Hub: StartAsync()
+            Hub->>+SRHub: Negoziazione WebSocket
+            
+            alt Connessione riuscita
+                SRHub-->>-Hub: Connected
+                Hub-->>-SR: ConnectionId: "abc123"
+                Note over SR: _isConnected = true
+            else Errore connessione
+                SRHub--xHub: Errore
+                Hub--xSR: Exception
+                Note over SR: Prova prossimo endpoint
+            end
+        end
+        
+        alt Tentativo 2: URL + /hub
+            SR->>SR: Build HubConnection con<br/>"https://localhost:7193/hub"
+            Note over SR: Ripete tentativo...
+        end
+        
+        alt Tentativo 3: URL + /configuratorHub
+            SR->>SR: Build HubConnection con<br/>"https://localhost:7193/configuratorHub"
+            SR->>Hub: StartAsync()
+            Hub->>SRHub: Negoziazione
+            SRHub-->>Hub: Connected
+            Hub-->>SR: ConnectionId: "xyz789"
+            Note over SR: ✓ Connesso con successo!
+        end
+    end
+    
+    SR->>SR: RegisterReceiveHandlers()
+    
+    rect rgb(240, 255, 240)
+        Note over SR,Hub: Registrazione handler messaggi in arrivo
+        SR->>Hub: connection.On<string, object>("ReceiveMessage", handler)
+        SR->>Hub: connection.On<object>("GetMessage", handler)
+    end
+    
+    SR-->>-SR: true (connesso)
+    
+    Note over User,C3D: FASE 2: INVIO MESSAGGIO AL CLIENT 3D
+    
+    User->>+MCP: ListElements(receiverId, catalogo: "adm", cerca: "scaf")
+    
+    MCP->>MCP: Costruisci Message<br/>{<br/>  action: "list_elements",<br/>  params: {<br/>    catalogo: "adm",<br/>    cerca: "scaf",<br/>    history: false<br/>  }<br/>}
+    
+    MCP->>+SR: CallHubMethodAsync("SendMessage",<br/>  receiverId: "xyz789",<br/>  message<br/>)
+    
+    SR->>SR: EnsureConnectedAsync()
+    
+    alt Connesso
+        SR->>+Hub: SendCoreAsync("SendMessage",<br/>  ["xyz789", message])
+        Hub->>+SRHub: Invia via WebSocket
+        SRHub->>+C3D: ReceiveMessage("server", message)
+        
+        Note over C3D: Client riceve comando list_elements
+        
+        C3D->>C3D: Parse message.action = "list_elements"
+        C3D->>C3D: Parse message.params<br/>{catalogo: "adm", cerca: "scaf"}
+        
+        C3D->>C3D: Esegue ricerca nel catalogo locale<br/>o tramite API interna
+        
+        C3D->>C3D: Prepara risultati<br/>elements = [<br/>  {cod: "sptest", des: "Scaffale pensile"},<br/>  {cod: "scaf01", des: "Scaffalatura modulare"},<br/>  ...<br/>]
+        
+        Note over C3D: ⬅️ RISPOSTA CLIENT → SERVER
+        
+        C3D->>-SRHub: SendMessage("xyz789", {<br/>  action: "list_elements",<br/>  params: elements<br/>})
+        
+        SRHub->>-Hub: Inoltra messaggio
+        Hub->>-SR: ReceiveMessage trigger
+        
+        rect rgb(255, 248, 240)
+            Note over SR: Handler "ReceiveMessage" attivato
+            SR->>SR: _receiveHandlers.ForEach(handler => handler(...))
+        end
+        
+        SR->>MCP: OnReceiveMessage callback<br/>(senderId: "xyz789", message)
+        
+        MCP->>MCP: Parse message JSON
+        MCP->>MCP: Verifica action = "list_elements"
+        
+        alt action = "list_elements"
+            MCP->>MCP: lock(_lastListLock)<br/>_lastListElementsPayload = message.params
+            Note over MCP: Payload salvato per recupero successivo
+        end
+        
+        SR-->>-MCP: true (inviato)
+        
+    else Non connesso
+        SR-->>MCP: false
+    end
+    
+    MCP-->>-User: ✅ Richiesta list_elements inviata<br/>{sent: true, receiverId: "xyz789"}
+    
+    Note over User,C3D: FASE 3: RECUPERO RISULTATI DAL CLIENT
+    
+    User->>+MCP: GetLastListElements()
+    
+    MCP->>MCP: lock(_lastListLock)<br/>payload = _lastListElementsPayload
+    
+    alt Payload presente
+        MCP->>MCP: Parse JSON payload
+        MCP-->>-User: ✅ Risultati ricerca<br/>{<br/>  success: true,<br/>  elements: [<br/>    {cod: "sptest", des: "Scaffale pensile"},<br/>    {cod: "scaf01", des: "Scaffalatura modulare"}<br/>  ]<br/>}
+    else Payload assente
+        MCP-->>User: ⚠️ Nessun dato ricevuto<br/>{success: false, message: "No list_elements received"}
+    end
+    
+    Note over User,C3D: COMUNICAZIONE BIDIREZIONALE COMPLETATA<br/>Request: AI → Client<br/>Response: Client → AI
+    
+    Note over User,C3D: FASE 4: GESTIONE DISCONNESSIONE E RICONNESSIONE
+    
+    rect rgb(255, 240, 240)
+        Note over Hub,SRHub: Connessione persa (es. server restart)
+        SRHub--xHub: Connection Lost
+        Hub->>SR: Closed event triggered
+        SR->>SR: _isConnected = false
+        Note over SR: Log: "Connessione SignalR chiusa"
+    end
+    
+    rect rgb(255, 255, 240)
+        Note over SR,Hub: SignalR Client avvia auto-reconnect
+        Hub->>SR: Reconnecting event
+        SR->>SR: Log: "Tentativo riconnessione"
+        
+        Hub->>Hub: Wait 0s (first attempt)
+        Hub->>SRHub: Tentativo connessione
+        
+        alt Riconnessione fallita
+            SRHub--xHub: Failed
+            Hub->>Hub: Wait 2s (second attempt)
+            Hub->>SRHub: Nuovo tentativo
+        end
+        
+        alt Riconnessione riuscita
+            SRHub-->>Hub: Connected
+            Hub->>SR: Reconnected event<br/>new ConnectionId
+            SR->>SR: _isConnected = true
+            SR->>SR: RegisterReceiveHandlers()<br/>(ri-registra handler)
+            Note over SR: ✓ Riconnesso automaticamente
+        end
+    end
+    
+    Note over User,C3D: Sistema resiliente con auto-recovery

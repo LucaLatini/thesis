@@ -5,23 +5,28 @@
 \usepackage{notes}
 \usepackage{shortcuts}
 \usepackage{acronym}
+\usepackage{placeins}
 
 \school{\unibo}
-\programme{Corso di Laurea [Magistrale?] in Ingegneria e Scienze Informatiche}
-\title{Fancy Title}
-\author{Candidate Name}
+\programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
+\title{Prompt-to-Action: un Model Context Protocol per l’integrazione real-time con configuratori 3D}
+\author{Latini Luca}
 \date{\today}
-\subject{Supervisor's course name}
-\supervisor{Prof. Supervisor Here}
-\cosupervisor{Dott. CoSupervisor 1}
-\morecosupervisor{Dott. CoSupervisor 2}
+\subject{Computer Graphics}
+\supervisor{Prof. Damiana Lazzaro}
+\cosupervisor{Dott. Christian Lillini}
+%\morecosupervisor{Dott. CoSupervisor 2}
 \session{I}
-\academicyear{2022-2023}
+\academicyear{2025-2026}
 
-% Definition of acronyms
-\acrodef{IoT}{Internet of Thing}
-\acrodef{vm}[VM]{Virtual Machine}
-
+% Definition of acronyms (keys in lowercase)
+\acrodef{mcp}[\textit{MCP}]{\textit{Model Context Protocol}}
+\acrodef{llm}[\textit{LLM}]{\textit{Large Language Model}}
+\acrodef{api}[\textit{API}]{\textit{Application Programming Interface}}
+\acrodef{lsp}[\textit{LSP}]{\textit{Language Server Protocol}}
+\acrodef{ide}[\textit{IDE}]{\textit{Integrated Development Environment}}
+\acrodef{ai}[\textit{AI}]{\textit{Artificial Intelligence}}
+\acrodef{http}[\textit{HTTP}]{\textit{HyperText Transfer Protocol}}
 
 \mainlinespacing{1.241} % line spacing in mainmatter, comment to default (1)
 
@@ -30,7 +35,7 @@
 \frontmatter\frontispiece
 
 \begin{abstract}	
-Max 2000 characters, strict.
+Il presente lavoro di tesi descrive la progettazione e realizzazione di un prototipo di \ac{mcp} volto a consentire il controllo e la configurazione di un configuratore grafico 3D mediante l’uso di prompt testuali. L’obiettivo principale è stato definire e implementare un meccanismo che traduca comandi descritti in linguaggio naturale nella chiamata automatica degli strumenti appropriati e nell’esecuzione delle operazioni corrispondenti all’interno del configuratore. Il sistema è realizzato in C\# e si articola in moduli per la gestione del contesto, l’invocazione dei tool e la comunicazione in tempo reale con il client grafico tramite WebSocket. Il lavoro comprende l’analisi dei requisiti, la progettazione dell’architettura software, l’implementazione dei moduli principali e la validazione funzionale tramite scenari di test. I risultati dimostrano la fattibilità del paradigma prompt\(\rightarrow\)tool per operazioni di gestione progetto nel configuratore, evidenziando punti di forza e limiti attuali in termini di robustezza semantica, gestione degli errori e scalabilità. Come contributo si propone un prototipo funzionante e linee guida per future estensioni, quali la gestione multi-utente.
 \end{abstract}
 
 \begin{dedication} % this is optional
@@ -46,50 +51,3720 @@ Optional. Max a few lines.
 \mainmatter
 
 %----------------------------------------------------------------------------------------
-\chapter{Introduction}
+\chapter{Introduzione}
 \label{chap:introduction}
 %----------------------------------------------------------------------------------------
 
-Write your intro here.
-\sidenote{Add sidenotes in this way. They are named after the author of the thesis}
+%Write your intro here.
+%\sidenote{Add sidenotes in this way. They are named after the author of the thesis}
 
-You can use acronyms that your defined previously,
-such as \ac{IoT}.
+%You can use acronyms that your defined previously,
+%such as \ac{IoT}.
 %
-If you use acronyms twice,
-they will be written in full only once
-(indeed, you can mention the \ac{IoT} now without it being fully explained).
+%If you use acronyms twice,
+%they will be written in full only once
+%(indeed, you can mention the \ac{IoT} now without it being fully explained).
 %
-In some cases, you may need a plural form of the acronym.
+%In some cases, you may need a plural form of the acronym.
 %
-For instance,
-that you are discussing \acp{vm},
-you may need both \ac{vm} and \acp{vm}.
+%For instance,
+%that you are discussing \acp{vm},
+%you may need both \ac{vm} and \acp{vm}.
+\section{Contesto Aziendale e Motivazione del Progetto}
+\label{sec:contesto-aziendale}
+Il lavoro descritto in questa tesi è stato svolto nell'ambito di un tirocinio presso \textbf{Apra S.p.A.}, una software house attiva da oltre 40 anni nello sviluppo di soluzioni IT per la trasformazione digitale delle imprese. Apra opera in ambiti quali Cloud Computing, Big Data, Digital Experience, Mobile, Business Analytics, Internet of Things e Industria 4.0, collaborando con importanti produttori di tecnologie informatiche e offrendo soluzioni e consulenza per l'ottimizzazione dei processi aziendali.
 
-\paragraph{Structure of the Thesis}
+Durante il tirocinio sono stato inserito nel team Ricerca e Sviluppo, impegnato nell'identificazione di idee innovative per migliorare la connettività e l'orchestrazione tra servizi AI e applicazioni aziendali. Il team ha manifestato particolare interesse nel valutare la fattibilità dell'integrazione tra server MCP e un front-end specializzato, in questo caso un configuratore grafico 3D, ambito ancora poco esplorato ma potenzialmente rilevante per i flussi di lavoro aziendali.
 
-\note{At the end, describe the structure of the paper}
+L'obiettivo principale del tirocinio è stato esplorativo: verificare come un Model Context Protocol possa essere efficacemente integrato con un configuratore 3D e definire una possibile roadmap tecnica per un'adozione futura. Il lavoro si è focalizzato sulla prototipazione e sulla valutazione di pattern di integrazione (server MCP \(\leftrightarrow\) bridge realtime \(\leftrightarrow\) client 3D), con particolare attenzione a vincoli operativi quali autenticazione, sincronizzazione realtime, robustezza semantica dei comandi e requisiti di sicurezza. Il risultato atteso non è una soluzione definitiva, ma un insieme di evidenze tecniche, criteri di fattibilità e raccomandazioni operative per gli sviluppi successivi (ad es. integrazione di moduli NLP, supporto multi-utente, politiche di auditing e scalabilità).
 
-\chapter{State of the art}
+Nel contesto dell'attività svolta, due componenti fondamentali erano già presenti in azienda:
+\begin{itemize}
+  \item un bridge realtime basato su SignalR, che funge da canale di comunicazione bidirezionale;
+  \item un configuratore grafico 3D (client), responsabile del rendering e dell'interazione con i modelli.
+\end{itemize}
+Il mio compito è stato quindi di utilizzare questi elementi esistenti come base: sviluppare un prototipo di MCP server, creare il canale bidirezionale tramite il bridge SignalR e adattare il client grafico affinché possa stabilire la connessione, interpretare i messaggi in ingresso e applicare le azioni richieste.
 
-I suggest referencing stuff as follows: \cref{fig:random-image} or \Cref{fig:random-image}
+\section{Obiettivi della tesi}
+\label{sec:obiettivi}
+Obiettivo generale: progettare e realizzare un prototipo operativo di Model Context Protocol che permetta il controllo di un configuratore 3D tramite prompt testuali, valutando la fattibilità tecnica dell'integrazione realtime e definendo una roadmap per un'eventuale industrializzazione.
 
-\begin{figure}
-    \centering
-    \includegraphics[width=.8\linewidth]{figures/random-image.pdf}
-    \caption{Some random image}
-    \label{fig:random-image}
+Obiettivi specifici e misurabili:
+\begin{itemize}
+  \item Implementare il core MCP in C\# e definire il meccanismo di mapping prompt\,\(\rightarrow\)\,tool 
+  \item Integrare e sfruttare il bridge realtime esistente basato su SignalR/WebSocket per stabilire un canale bidirezionale tra MCP server e client grafico. 
+  \item Adattare il configuratore grafico esistente affinché possa connettersi a SignalR, ricevere e interpretare i messaggi dal MCP e invocare le funzioni appropriate per aggiornare la vista 3D.
+  \item Fornire o migliorare, se necessario, un'interfaccia utente per l'invio di prompt e la visualizzazione dello stato, front-end in Svelte.
+  \item Definire e verificare almeno \textbf{10} scenari end-to-end (ad es.: creazione progetto, aggiunta componente, apertura riga di progetto, consultazione catalogo).
+  \item Documentare il processo di integrazione e consegnare un kit di riproducibilità (README aggiornato, file di esempio, script di avvio) che spieghi come replicare l'integrazione MCP \(\leftrightarrow\) SignalR \(\leftrightarrow\) client 3D.
+\end{itemize}
+
+Ambito e vincoli:
+\begin{itemize}
+  \item Incluso: integrazione del MCP con il bridge SignalR esistente, adattamento del client grafico per la gestione dei messaggi, implementazione del mapping prompt\(\rightarrow\)tool, prototipazione e test funzionali/integrativi.
+  \item Escluso: sviluppo di un nuovo engine SignalR o riscrittura completa del configuratore 3D; implementazione di NLP avanzato per interpretazione libera del linguaggio (si adotta un insieme di prompt strutturati/templati).
+\end{itemize}
+\chapter{Background}
+\label{chap:background}
+\section{La Crisi della Frammentazione nell'Ecosistema AI}
+Modelli Linguistici di Grande Scala (\acs{llm}) sono diventati centrali nell'Intelligenza Artificiale (\ac{ai}) moderna, dimostrando capacità straordinarie nella comprensione e generazione del linguaggio naturale \cite{mcp_survey_kent}, e alimentando agenti autonomi che operano in ambienti cloud, edge e desktop\cite{mcp_survey_kent}. Questi agenti sono cruciali per automatizzare compiti complessi ed eseguire azioni interagendo con servizi o strumenti esterni.\cite{mcp_karimova_analysis}
+
+Nonostante i rapidi progressi nel ragionamento degli LLM, essi rimangono intrinsecamente vincolati dalla dipendenza da dataset di addestramento statici, limitando la loro applicabilità in scenari dinamici e in tempo reale \cite{mcp_survey_aditi}. Tradizionalmente, l'integrazione degli LLM con sistemi esterni si è basata su interfacce di programmazione (\ac{api}) frammentate e costruite su misura.\cite{mcp_survey_kent}
+
+Questa mancanza di standardizzazione crea una crisi di frammentazione\cite{mcp_survey_transport}, ostacolando la scalabilità, la sicurezza e la generalizzazione della comunicazione tra agenti guidati dagli LLM\cite{mcp_survey_kent}. Le integrazioni ad-hoc comportano una duplicazione dello sforzo di sviluppo, aumentano la complessità, e introducono inconsistenze di sicurezza\cite{mcp_survey_aditi}. Per ottenere flussi di lavoro multi-agente modulari, riutilizzabili e resilienti, l'interoperabilità,la capacità dei sistemi distinti di scoprire capacità, scambiare contesto e coordinare azioni in modo fluido, è considerata essenziale.\cite{mcp_survey_kent}
+
+\section{Definizione e Ruolo del Model Context Protocol (MCP)}
+\label{sec:mcp-definition}
+Per rispondere a questa esigenza sistemica di standardizzazione, Anthropic ha introdotto \ac{mcp}, lanciato nel novembre 2024\cite{mcp_anthropic_launch}. L'MCP è uno standard open-source progettato per connettere le applicazioni \ac{ai} a sistemi esterni.\cite{mcp_doc_whatis}
+L'MCP è stato descritto metaforicamente come una "porta USB-C per l'AI". Proprio come USB-C standardizza la connettività dei dispositivi, l'MCP fornisce un modo universale per le applicazioni AI di accedere a dati e strumenti.\cite{mcp_doc_whatis}
+Il suo obiettivo principale è standardizzare il modo in cui le applicazioni forniscono contesto agli LLM, sostituendo le integrazioni frammentate con un protocollo unico e universale. Questo approccio mira a sbloccare l'integrazione sicura e strutturata tra i sistemi \ac{ai} e le risorse esterne, migliorando l'efficacia dei modelli fornendo risposte più pertinenti. L'MCP si inserisce in una linea evolutiva di standardizzazione dei protocolli, simile al successo ottenuto dalle \ac{api} e dal \ac{lsp} nei rispettivi domini.\cite{mcp_doc_whatis}
+
+\subsection{Architettura e Componenti Centrali}
+\label{subsec:sicurezza-autenticazione}
+L'MCP si basa su un'architettura client-server persistente che facilita l'interazione strutturata tra LLM e risorse esterne. I partecipanti chiave sono:
+
+\begin{itemize}
+\item \textbf{MCP Host:} L'applicazione \ac{ai} (ad esempio, Claude Desktop o un \ac{ide}) che gestisce l'esperienza utente complessiva e coordina uno o più Client MCP. L'Host funge da contenitore per l'LLM e ha la responsabilità di orchestrare le connessioni. Gestisce il consenso dell'utente per l'accesso ai dati e l'esecuzione di azioni, e aggrega il contesto proveniente da più client per fornirlo al modello.\cite{mcp_doc_arch}
+
+\item \textbf{MCP Client:} Un componente che mantiene una connessione dedicata uno-a-uno con un Server MCP per ottenere il contesto da utilizzare. Il client agisce come un traduttore, convertendo le richieste dell'LLM (spesso sotto forma di chiamate a funzioni) nel formato del protocollo MCP e, viceversa, trasformando le risposte del server in un formato comprensibile per l'LLM. È anche responsabile della scoperta e dell'utilizzo dei server disponibili.\cite{mcp_doc_arch}
+
+\item \textbf{MCP Server:} Il programma che espone le capacità, fornendo dati, servizi e template al Client. I Server MCP possono essere eseguiti sia localmente (ad esempio, tramite il trasporto Stdio) che remotamente (ad esempio, tramite Streamable \ac{http}).Ogni server si concentra su un punto di integrazione specifico, promuovendo la riutilizzabilità e la manutenibilità\cite{mcp_doc_arch}
+\end{itemize}
+
+L'MCP è composto da due strati concettualmente distinti:\cite{mcp_survey_aditi}
+
+\begin{itemize}
+\item \textbf{Livello Dati (Data Layer):} Definisce l'interazione basata sulla specifica JSON-RPC 2.0. Questo livello include la gestione del ciclo di vita (lifecycle management) per la negoziazione delle capacità e i primitives.\cite{mcp_doc_arch}
+
+\item \textbf{Livello Trasporto (Transport Layer):} Gestisce la trasmissione fisica dei messaggi \cite{mcp_survey_kent}. Supporta lo Stdio (per la comunicazione locale tra processi con prestazioni ottimali e senza network overhead) e Streamable \ac{http} (che utilizza \ac{http} POST per i messaggi client-server, con opzionali Server-Sent Events per lo streaming e supporto per autenticazione standard \ac{http} come token o OAuth).\cite{mcp_doc_arch}
+\end{itemize}
+ I \textbf{primitives} sono il concetto più importante dell'MCP e definiscono il modo in cui i server possono condividere contesto con le applicazioni \ac{ai}.
+
+I server espongono tre componenti principali:
+
+\begin{itemize}
+\item \textbf{Tools (Strumenti):} Capacità controllate dal modello (Model-controlled) che l'LLM può invocare per eseguire azioni, chiamate \ac{api} o query di database. L'LLM decide quando utilizzare questi strumenti basandosi sulle richieste dell'utente.\cite{mcp_doc_servers}
+
+\item \textbf{Resources (Risorse):} Fonti di dati controllate dall'applicazione (Application-controlled) che forniscono dati strutturati e in sola lettura per arricchire il contesto. Le risorse sono identificabili tramite URI unici (ad esempio, \texttt{file:///path/to/document.md}).\cite{mcp_doc_servers}
+
+\item \textbf{Prompts (Template):} Template riutilizzabili e parametrizzati controllati dall'utente (User-controlled) per definire pattern di interazione consistenti e strutturare flussi di lavoro complessi.\cite{mcp_doc_servers}
+\end{itemize}
+
+\subsection{ Ruolo dell'MCP nell'Evoluzione dell'AI e Vantaggi Chiave}
+L'MCP è una tecnologia fondamentale per l'evoluzione verso l'Agentic AI, fornendo meccanismi standardizzati che permettono agli agenti autonomi di accedere a dati in tempo reale e compiere azioni dinamiche.
+
+Oltre ai primitives del server, l'MCP definisce anche primitives che il Client espone ai server, consentendo interazioni bidirezionali più ricche:
+
+\begin{itemize}
+\item \textbf{Sampling:} Consente ai server di richiedere al client l'esecuzione di inferenza (completamenti) da parte dell'LLM, rendendo i server indipendenti dal modello AI specifico e mantenendo il controllo umano (human-in-the-loop) e la sicurezza sul lato client.
+\end{itemize}
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=.8\linewidth]{figures/Sampling.png}
+  \caption{Architettura del primitive Sampling nel \ac{mcp} che mostra il ciclo di richiesta–inferenza–approvazione tra client, server e utente umano.\cite{mcp_doc_clients}}
+  \label{fig:sampling}
 \end{figure}
 
-\section{Some cool topic}
+\FloatBarrier
 
-\chapter{Contribution}
+\begin{itemize}
+\item \textbf{Elicitation:} Permette ai server di richiedere input specifici o una conferma all'utente (ad esempio, per finalizzare una prenotazione).
 
-You may also put some code snippet (which is NOT float by default), eg: \cref{lst:random-code}.
+\end{itemize}
+\begin{figure}[!htbp]
+  \centering
+  \includegraphics[width=.8\linewidth]{figures/Elicitation.png}
+  \caption{Architettura del primitive Elicitation nell'MCP che mostra il ciclo di richiesta-interazione umana-risposta tra Server, Client e utente.\cite{mcp_doc_clients}}
+\label{fig:Elicitation}
+\end{figure}
 
-\lstinputlisting[float,language=Java,label={lst:random-code}]{listings/HelloWorld.java}
+\FloatBarrier
 
-\section{Fancy formulas here}
+\begin{itemize}
+\item \textbf{Roots:} Meccanismo di coordinamento che definisce i confini logici o gli scope operativi, spesso per percorsi di filesystem, per guidare i server su quali risorse concentrarsi.
+\end{itemize}
+
+L'adozione dell'\ac{mcp} porta vantaggi significativi nell'ecosistema \ac{ai}:
+
+\begin{itemize}
+\item \textbf{Standardizzazione e Riutilizzabilità:} Riduce la complessità e il tempo di sviluppo\cite{mcp_doc_whatis}, permettendo agli sviluppatori di riutilizzare il codice di integrazione attraverso diverse applicazioni AI.\cite{mcp_karimova_analysis}
+
+\item \textbf{Sicurezza e Trasparenza:} Implementa schemi standardizzati per l'autenticazione, l'autorizzazione e l'audit, garantendo coerenza e riducendo i rischi associati agli approcci ad-hoc.\cite{mcp_survey_aditi}\cite{mcp_karimova_analysis}
+
+\item \textbf{Composability e Scalabilità:} Promuove un design modulare che supporta la scalabilità indipendente dei componenti (server e client). Inoltre, la composability permette ai nodi di funzionare sia come client che come server, facilitando la creazione di catene di agenti complesse e gerarchiche.\cite{mcp_survey_aditi}\cite{mcp_karimova_analysis}
+
+\item \textbf{Roadmap di Adozione:} L'MCP è visto come un passo iniziale e cruciale in una roadmap di adozione graduale dei protocolli AI, fungendo da base per l'accesso agli strumenti prima di protocolli più complessi come ACP, A2A e ANP.\cite{mcp_survey_kent}
+\end{itemize}
+
+\section{Panoramica sulle WebSocket}
+\label{sec:websocket}
+%\paragraph{Structure of the Thesis}
+WebSocket è uno standard (\textit{RFC6455}) per comunicazione bidirezionale full-duplex su connessione TCP persistente \cite{gourko_websocket_thesis}. Una volta stabilita (tramite handshake HTTP), client e server possono inviare messaggi in entrambe le direzioni senza chiusure continue, riducendo l’overhead tipico delle richieste HTTP tradizionali. Questo consente aggiornamenti in tempo reale con bassa latenza e alto throughput \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Ad esempio, WebSocket è ampiamente usato in applicazioni chat, giochi online, dashboard finanziari e servizi di localizzazione in cui servono flussi di dati continui \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Altri vantaggi includono il supporto nativo dei browser moderni (nessun plugin aggiuntivo) e la possibilità di inviare dati binari, riducendo i costi di encoding/decoding rispetto a HTTP/1.0. Inoltre, non è necessario ricaricare la pagina o fare polling ripetuto per ricevere nuovi dati.
+
+Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più complessa: ogni connessione richiede risorse di memoria e CPU per rimanere attiva\cite{gourko_websocket_thesis}. In scenari con molti utenti simultanei, questo può diventare un collo di bottiglia di scalabilità. A livello di sicurezza, è necessario usare sempre WSS (WebSocket sicuro) su TLS per cifrare il traffico\cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}; in caso contrario, la connessione rimane vulnerabile a intercettazioni. Gli stessi WebSocket non hanno meccanismi automatici di riconnessione né controllo del flusso; questi devono essere gestiti manualmente dall’applicazione. Infine, aspetti di sicurezza come l’autenticazione e la validazione dell’origin devono essere implementati con attenzione, poiché errori possono esporre a rischi come XSS/CSRF\cite{gourko_websocket_thesis}
+%\note{At the end, describe the structure of the paper}
+%----------------------------------------------------------------------------------------
+\section{Comunicazione Real-Time}
+\label{sec:comunicazione-realtime}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce le tecnologie per comunicazione real-time utilizzate nel progetto,
+% partendo dal protocollo WebSocket base fino all'astrazione SignalR.
+
+%----------------------------------------------------------------------------------------
+\subsection{SignalR: Astrazione High-Level per Real-Time Communication}
+\label{subsec:signalr-abstrazione}
+%----------------------------------------------------------------------------------------
+
+SignalR è una libreria open-source per ASP.NET Core sviluppata da Microsoft che semplifica l'aggiunta di funzionalità real-time alle applicazioni web. A differenza di WebSocket raw, SignalR fornisce un'astrazione di alto livello che gestisce automaticamente la selezione del trasporto, la riconnessione, il routing dei messaggi e la serializzazione.
+
+\paragraph{Caratteristiche Principali:}
+\begin{itemize}
+\item \textbf{Transport Fallback Automatico:} SignalR tenta di utilizzare WebSocket come trasporto preferito, ma può automaticamente passare a Server-Sent Events (SSE) o Long Polling se WebSocket non è supportato dal client o bloccato da firewall/proxy. Questo garantisce la massima compatibilità senza richiedere logica custom.
+
+\item \textbf{Hub Pattern:} SignalR introduce il concetto di \textit{Hub}, un'astrazione che funziona come punto centrale per le comunicazioni. Gli Hub permettono al server di invocare metodi sui client connessi e viceversa, con supporto per strongly-typed clients tramite interfacce C\#.
+
+\item \textbf{Riconnessione Automatica:} A differenza di WebSocket puro, SignalR gestisce automaticamente le disconnessioni improvvise (network glitch, timeout) e tenta la riconnessione con backoff esponenziale configurabile.
+
+\item \textbf{Scaling Out:} SignalR supporta nativamente lo scale-out tramite backplane (Redis, Azure SignalR Service) per distribuire connessioni su multiple istanze server, fondamentale per applicazioni ad alta disponibilità.
+
+\item \textbf{Strongly-Typed Hubs:} Tramite interfacce generiche (\texttt{Hub<IClient>}), SignalR offre type-safety compile-time per i metodi invocabili sui client, riducendo errori runtime e migliorando la manutenibilità.
+\end{itemize}
+
+\paragraph{Modello Full-Duplex e Pattern di Messaggistica:}
+
+SignalR implementa un modello di comunicazione full-duplex bidirezionale dove:
+\begin{itemize}
+\item \textbf{Server-to-Client (Push):} Il server può invocare metodi sui client in qualsiasi momento, senza polling. Supporta broadcasting (tutti i client), multicasting (gruppi di client) e unicasting (client specifico tramite ConnectionId).
+
+\item \textbf{Client-to-Server (Pull/Push):} I client possono invocare metodi hub sul server, ricevendo risposte sincrone (con return value) o asincrone (via callback).
+
+\item \textbf{Pattern Supportati:}
+  \begin{itemize}
+  \item \textit{Request-Response:} Client invoca metodo hub, server risponde
+  \item \textit{Fire-and-Forget:} Invio messaggio senza attesa risposta
+  \item \textit{Event-Based:} Registrazione callback per eventi specifici
+  \item \textit{Streaming:} Invio dati in stream continuo (Server-to-Client o Client-to-Server)
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Gestione Connessioni e Lifecycle:}
+
+SignalR gestisce automaticamente il ciclo di vita delle connessioni:
+\begin{enumerate}
+\item \textbf{Negotiation:} Il client invia una richiesta HTTP di negoziazione per determinare trasporto disponibile e ottenere connection token
+\item \textbf{Connection:} Stabilimento connessione con trasporto selezionato (WebSocket upgrade se disponibile)
+\item \textbf{Connected:} Il server assegna un ConnectionId univoco al client
+\item \textbf{Heartbeat/Keep-Alive:} Ping periodici per verificare connessione attiva (configurabile, default 15 secondi)
+\item \textbf{Reconnection:} Se connessione persa, client tenta riconnessione automatica
+\item \textbf{Disconnection:} Invocazione di \texttt{OnDisconnectedAsync()} per cleanup risorse
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------
+\subsection{Confronto WebSocket vs SignalR: Motivazioni della Scelta}
+\label{subsec:websocket-vs-signalr}
+%----------------------------------------------------------------------------------------
+
+La scelta di SignalR rispetto a WebSocket raw per questo progetto è motivata da diverse considerazioni tecniche:
+
+\begin{table}[!htbp]
+\centering
+\begin{tabular}{|p{3cm}|p{5cm}|p{5cm}|}
+\hline
+\textbf{Aspetto} & \textbf{WebSocket Raw} & \textbf{SignalR} \\
+\hline
+Compatibilità & Richiede supporto WebSocket client/server & Fallback automatico SSE/Long Polling \\
+\hline
+Riconnessione & Manuale (custom logic) & Automatica con backoff esponenziale \\
+\hline
+Routing messaggi & Custom (parsing manuale) & Hub pattern con metodi tipizzati \\
+\hline
+Serializzazione & Manuale (JSON.stringify/parse) & Automatica con System.Text.Json \\
+\hline
+Scalabilità & Sticky sessions richieste & Backplane Redis/Azure per scale-out \\
+\hline
+Type-Safety & Nessuna (stringhe JSON) & Strongly-typed con interfacce C\# \\
+\hline
+Autenticazione & Custom implementation & Integrazione JWT/Cookie built-in \\
+\hline
+Logging/Monitoring & Custom & ILogger integration, metrics built-in \\
+\hline
+\end{tabular}
+\caption{Confronto tra WebSocket raw e SignalR}
+\label{tab:websocket-signalr-comparison}
+\end{table}
+
+\FloatBarrier
+
+\paragraph{Motivazioni Specifiche del Progetto:}
+
+\begin{itemize}
+\item \textbf{Resilienza Network:} Il configuratore 3D può essere utilizzato da ambienti con network instabile (cantieri, showroom). La riconnessione automatica di SignalR garantisce continuità servizio senza intervento utente.
+
+\item \textbf{Type-Safety End-to-End:} L'uso di \texttt{Hub<IClient>} permette refactoring sicuro e IntelliSense durante sviluppo, riducendo bug runtime.
+
+\item \textbf{Integration con .NET Ecosystem:} SignalR si integra nativamente con Dependency Injection, ILogger, IConfiguration di ASP.NET Core, riducendo boilerplate code.
+
+\item \textbf{Scalabilità Futura:} Se il sistema dovesse scalare a centinaia di client simultanei, SignalR offre path chiaro verso Azure SignalR Service senza riscrittura codice.
+
+\item \textbf{Developer Experience:} SignalR riduce drasticamente il codice necessario rispetto a WebSocket raw (stima: 60-70\% meno codice per funzionalità equivalenti).
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{Pattern Hub e Strongly-Typed Clients}
+\label{subsec:pattern-hub}
+%----------------------------------------------------------------------------------------
+
+Il pattern Hub di SignalR è centrale nell'architettura del bridge real-time del progetto.
+
+\paragraph{Anatomia di un Hub:}
+
+Un Hub SignalR è una classe C\# che estende \texttt{Hub} o \texttt{Hub<T>}:
+
+\begin{itemize}
+\item \textbf{Hub Methods:} Metodi pubblici invocabili dai client. Possono essere async e restituire \texttt{Task} o \texttt{Task<T>}.
+
+\item \textbf{Context:} Proprietà \texttt{Context} fornisce accesso a informazioni sulla connessione corrente (ConnectionId, User, Headers, QueryString).
+
+\item \textbf{Clients:} Proprietà \texttt{Clients} permette di invocare metodi sui client connessi:
+  \begin{itemize}
+  \item \texttt{Clients.All}: broadcast a tutti
+  \item \texttt{Clients.Client(connectionId)}: unicast a client specifico
+  \item \texttt{Clients.Group(groupName)}: multicast a gruppo
+  \item \texttt{Clients.Caller}: risposta al chiamante
+  \item \texttt{Clients.Others}: tutti tranne chiamante
+  \end{itemize}
+
+\item \textbf{Groups:} Proprietà \texttt{Groups} per aggiungere/rimuovere client da gruppi logici (es. per room-based messaging).
+
+\item \textbf{Lifecycle Hooks:} 
+  \begin{itemize}
+  \item \texttt{OnConnectedAsync()}: invocato alla connessione client
+  \item \texttt{OnDisconnectedAsync(Exception)}: invocato alla disconnessione
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Strongly-Typed Clients:}
+
+Tramite \texttt{Hub<IClient>}, SignalR offre type-safety compile-time:
+
+\begin{verbatim}
+public interface IClient
+{
+    Task GetMessage(Message message);
+    Task GetConnectionId(string connectionId);
+}
+
+public class IwineHub : Hub<IClient>
+{
+    public async Task SendMessage(Message message)
+    {
+        // Type-safe: errore compilazione se metodo non esiste
+        await Clients.All.GetMessage(message);
+    }
+}
+\end{verbatim}
+
+Vantaggi:
+\begin{itemize}
+\item Refactoring sicuro (rename method propaga a chiamanti)
+\item IntelliSense durante sviluppo
+\item Errori compile-time invece di runtime
+\item Documentazione implicita (interfaccia = contratto)
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\section{Protocolli di Comunicazione}
+\label{sec:protocolli-comunicazione}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce i protocolli di comunicazione utilizzati nel sistema,
+% con focus su REST API, JSON-RPC 2.0 (core MCP) e il pattern dual-channel.
+
+%----------------------------------------------------------------------------------------
+\subsection{REST API e Architetture RESTful}
+\label{subsec:rest-api}
+%----------------------------------------------------------------------------------------
+
+Il sistema utilizza REST (Representational State Transfer) API per le operazioni sincrone di lettura/scrittura dati sul backend MarkunoAPI.
+
+\paragraph{Principi REST Applicati:}
+
+\begin{itemize}
+\item \textbf{Stateless:} Ogni richiesta HTTP contiene tutte le informazioni necessarie (header Authorization con JWT token). Il server non mantiene stato sessione tra richieste.
+
+\item \textbf{Resource-Based:} Le URL rappresentano risorse (progetti, articoli, catalogo) e non azioni. Esempio: \texttt{/muconf/plist} per lista progetti, \texttt{/muconf/radd} per aggiunta articolo.
+
+\item \textbf{HTTP Verbs:} Utilizzo semantico dei metodi HTTP:
+  \begin{itemize}
+  \item \texttt{GET}: lettura dati (idempotente, cacheable)
+  \item \texttt{POST}: creazione/modifica risorse (nel contesto MarkunoAPI, usato prevalentemente per tutte le operazioni)
+  \item \texttt{PUT}: aggiornamento completo risorsa
+  \item \texttt{DELETE}: eliminazione risorsa
+  \end{itemize}
+
+\item \textbf{JSON over HTTP:} Utilizzo di JSON come formato serializzazione per request/response body, con Content-Type \texttt{application/json}.
+
+\item \textbf{Status Codes Semantici:}
+  \begin{itemize}
+  \item \texttt{200 OK}: richiesta riuscita
+  \item \texttt{201 Created}: risorsa creata
+  \item \texttt{400 Bad Request}: errore validazione client
+  \item \texttt{401 Unauthorized}: token mancante/invalido
+  \item \texttt{404 Not Found}: risorsa non trovata
+  \item \texttt{500 Internal Server Error}: errore server
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Esempi di Endpoint MarkunoAPI:}
+
+\begin{itemize}
+\item \texttt{POST /api/login}: autenticazione utente, ritorna JWT token
+\item \texttt{POST /muconf/plist}: lista progetti con filtri
+\item \texttt{POST /muconf/pcreate}: creazione nuovo progetto
+\item \texttt{POST /muconf/radd}: aggiunta articolo a progetto
+\item \texttt{POST /muconf/rget}: recupero dati riga progetto
+\item \texttt{POST /muconf/rsave}: salvataggio modifiche riga
+\item \texttt{POST /mucalls/search}: ricerca catalogo prodotti
+\end{itemize}
+
+\paragraph{Limitazioni REST per Real-Time:}
+
+REST è intrinsecamente request-response e non supporta nativamente push dal server. Per notifiche real-time al configuratore 3D, è necessario un canale complementare (SignalR), dando origine al pattern dual-channel.
+
+%----------------------------------------------------------------------------------------
+\subsection{JSON-RPC 2.0: Fondamenti del Model Context Protocol}
+\label{subsec:json-rpc}
+%----------------------------------------------------------------------------------------
+
+JSON-RPC 2.0 è un protocollo di remote procedure call (RPC) leggero e stateless che utilizza JSON per encoding dei messaggi. È il protocollo base su cui è costruito l'MCP.
+
+\paragraph{Struttura Messaggi JSON-RPC:}
+
+Un messaggio JSON-RPC può essere:
+
+\begin{enumerate}
+\item \textbf{Request (chiamata metodo):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "AddArticle",
+    "arguments": { "cod": "sptest", "des": "Scaffale" }
+  },
+  "id": 1
+}
+\end{verbatim}
+
+\item \textbf{Response (successo):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "success": true,
+    "rowId": "8"
+  },
+  "id": 1
+}
+\end{verbatim}
+
+\item \textbf{Response (errore):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32600,
+    "message": "Invalid Request"
+  },
+  "id": 1
+}
+\end{verbatim}
+
+\item \textbf{Notification (no response expected):}
+\begin{verbatim}
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": { "progress": 50 }
+}
+\end{verbatim}
+\end{enumerate}
+
+\paragraph{MCP su JSON-RPC 2.0:}
+
+L'MCP utilizza JSON-RPC per standardizzare la comunicazione tra Host, Client e Server:
+
+\begin{itemize}
+\item \textbf{Tool Invocation:} Quando l'AI decide di invocare un tool, l'MCP Host invia una request JSON-RPC \texttt{tools/call} al Server MCP.
+
+\item \textbf{Resource Fetching:} Request \texttt{resources/read} per ottenere contenuto risorsa.
+
+\item \textbf{Prompt Rendering:} Request \texttt{prompts/get} per template prompt.
+
+\item \textbf{Sampling:} Il Server può richiedere inferenza LLM con request \texttt{sampling/createMessage} al Client.
+
+\item \textbf{Lifecycle:} Messaggi \texttt{initialize}, \texttt{initialized} per handshake iniziale e negoziazione capacità.
+\end{itemize}
+
+\paragraph{Vantaggi JSON-RPC per MCP:}
+
+\begin{itemize}
+\item \textbf{Semplicità:} Protocollo minimalista, facile da implementare in qualsiasi linguaggio
+\item \textbf{Stateless:} Ogni richiesta è indipendente, facilitando debugging e retry
+\item \textbf{Bidirezionale:} Sia client che server possono inviare request (fondamentale per Sampling)
+\item \textbf{Estensibile:} Facile aggiungere nuovi metodi mantenendo compatibilità
+\item \textbf{Type-safe:} Con schema JSON, validazione strutturale garantita
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{Dual-Channel Communication Pattern}
+\label{subsec:dual-channel}
+%----------------------------------------------------------------------------------------
+
+L'architettura del sistema implementa un pattern di comunicazione dual-channel che combina REST API (HTTP) e SignalR (WebSocket) per sfruttare i punti di forza di entrambi.
+
+\paragraph{Canale REST (HTTP):}
+\begin{itemize}
+\item \textbf{Uso:} Operazioni sincrone CRUD (Create, Read, Update, Delete)
+\item \textbf{Esempi:} Login, GetProjects, AddArticle (inserimento base), SearchCatalog
+\item \textbf{Vantaggi:} Stateless, cacheable, retry automatico con HttpClient, logging semplice
+\item \textbf{Direzione:} Unidirezionale MCP Server \(\rightarrow\) MarkunoAPI
+\end{itemize}
+
+\paragraph{Canale SignalR (WebSocket):}
+\begin{itemize}
+\item \textbf{Uso:} Notifiche real-time, comandi al client 3D, risposte asincrone
+\item \textbf{Esempi:} OpenProject, CreateProject, ListElements, notifiche aggiornamento dati
+\item \textbf{Vantaggi:} Bidirezionale, low-latency, push dal server, connessione persistente
+\item \textbf{Direzione:} Bidirezionale MCP Server \(\leftrightarrow\) IwineHub \(\leftrightarrow\) Configurator3D
+\end{itemize}
+
+\paragraph{Workflow Tipico Dual-Channel:}
+
+Esempio: Aggiunta articolo con notifica client 3D
+
+\begin{enumerate}
+\item MCP Tool riceve comando da AI: "Aggiungi scaffale al progetto"
+\item \textbf{REST}: POST /muconf/radd per inserire articolo base \(\rightarrow\) riceve rowId
+\item \textbf{REST}: POST /muconf/rget per recuperare stato articolo
+\item \textbf{REST}: POST /muconf/rsave per salvare varianti applicate
+\item \textbf{SignalR}: SendMessage("open", projectId) per notificare client 3D
+\item Client 3D riceve notifica via SignalR \(\rightarrow\) GET /muconf/pget via REST
+\item Client aggiorna vista 3D con nuovo articolo
+\end{enumerate}
+
+\paragraph{Vantaggi del Pattern:}
+
+\begin{itemize}
+\item \textbf{Separation of Concerns:} REST per dati, SignalR per eventi/comandi
+\item \textbf{Resilienza:} Fallimento SignalR non impedisce operazioni CRUD via REST
+\item \textbf{Performance:} REST cacheable, SignalR per latenza minima su notifiche
+\item \textbf{Scalabilità:} REST scale-out semplice, SignalR con backplane per sticky sessions
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\section{Autenticazione e Sicurezza}
+\label{sec:autenticazione-sicurezza}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce i meccanismi di autenticazione e sicurezza utilizzati
+% nel sistema, con focus su JWT, Bearer Token e CORS.
+
+%----------------------------------------------------------------------------------------
+\subsection{JWT (JSON Web Tokens)}
+\label{subsec:jwt}
+%----------------------------------------------------------------------------------------
+
+JWT è uno standard aperto (RFC 7519) per la creazione di token di accesso che permettono la propagazione sicura di identità e claim tra parti fidate.
+
+\paragraph{Struttura di un JWT:}
+
+Un JWT è composto da tre parti separate da punti:
+
+\texttt{header.payload.signature}
+
+\begin{enumerate}
+\item \textbf{Header:} Metadati sul token (algoritmo firma, tipo token)
+\begin{verbatim}
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+\end{verbatim}
+
+\item \textbf{Payload:} Claims (affermazioni) sull'utente e metadata
+\begin{verbatim}
+{
+  "sub": "1234567890",    // Subject (user ID)
+  "name": "John Doe",     // Custom claim
+  "iat": 1516239022,      // Issued At
+  "exp": 1516242622       // Expiration Time
+}
+\end{verbatim}
+
+\item \textbf{Signature:} Firma crittografica per verificare integrità
+\begin{verbatim}
+HMACSHA256(
+  base64UrlEncode(header) + "." +
+  base64UrlEncode(payload),
+  secret
+)
+\end{verbatim}
+\end{enumerate}
+
+\paragraph{Flusso Autenticazione JWT nel Sistema:}
+
+\begin{enumerate}
+\item \textbf{Login:} Client invia credenziali (username/password) a POST /api/login
+\item \textbf{Validazione:} MarkunoAPI valida credenziali contro database utenti
+\item \textbf{Generazione Token:} Se valide, genera JWT con claims utente (id, name, level, ruoli)
+\item \textbf{Response:} Ritorna JWT nel campo \texttt{LoginResponse.Data.User.Token}
+\item \textbf{Storage:} MCP Server salva token in variabile statica \texttt{\_authToken}
+\item \textbf{Utilizzo:} Per ogni richiesta REST successiva, include header \texttt{Authorization: Bearer <token>}
+\item \textbf{Validazione Server:} MarkunoAPI verifica firma JWT e claims (scadenza, issuer)
+\end{enumerate}
+
+\paragraph{Vantaggi JWT:}
+
+\begin{itemize}
+\item \textbf{Stateless:} Server non deve mantenere sessioni in memoria/database
+\item \textbf{Self-contained:} Tutti i dati necessari sono nel token (claims)
+\item \textbf{Scalabile:} Nessuna condivisione stato tra istanze server
+\item \textbf{Cross-domain:} Funziona con CORS per chiamate cross-origin
+\item \textbf{Standard:} Librerie disponibili per ogni linguaggio/piattaforma
+\end{itemize}
+
+\paragraph{Security Considerations:}
+
+\begin{itemize}
+\item \textbf{Expiration:} JWT deve avere claim \texttt{exp} (expiration time), tipicamente 15-30 minuti
+\item \textbf{HTTPS Only:} JWT trasmessi solo su HTTPS per prevenire intercettazione
+\item \textbf{Secret Protection:} Chiave firma JWT (secret) deve essere robusta e mai esposta
+\item \textbf{Token Refresh:} Implementare refresh token per sessioni lunghe senza richiedere re-login
+\item \textbf{Revocation:} JWT non revocabili nativamente (workaround: blacklist o short expiration)
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{Bearer Token Authentication}
+\label{subsec:bearer-token}
+%----------------------------------------------------------------------------------------
+
+Bearer Token Authentication è uno schema di autenticazione HTTP (RFC 6750) in cui il client invia un token (tipicamente JWT) nell'header Authorization delle richieste.
+
+\paragraph{Formato Header:}
+
+\begin{verbatim}
+Authorization: Bearer <token>
+\end{verbatim}
+
+Esempio concreto:
+\begin{verbatim}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi...
+\end{verbatim}
+
+\paragraph{Implementazione nel Sistema:}
+
+Nel progetto, ogni tool MCP che effettua chiamate REST:
+
+\begin{enumerate}
+\item Verifica presenza \texttt{\_authToken} (metodo \texttt{EnsureAuthenticatedAsync()})
+\item Se assente, esegue auto-login con credenziali default da \texttt{appsettings.json}
+\item Aggiunge header Authorization a HttpClient (metodo \texttt{AddAuthHeader()})
+\item HttpClient include automaticamente header in tutte le richieste successive
+\end{enumerate}
+
+Snippet concettuale:
+\begin{verbatim}
+private void AddAuthHeader()
+{
+    if (!string.IsNullOrEmpty(_authToken))
+    {
+        _httpClient.DefaultRequestHeaders.Authorization = 
+            new AuthenticationHeaderValue("Bearer", _authToken);
+    }
+}
+\end{verbatim}
+
+\paragraph{Gestione Scadenza Token:}
+
+Quando token scade, MarkunoAPI risponde con \texttt{401 Unauthorized}:
+
+\begin{enumerate}
+\item HttpClient riceve StatusCode 401
+\item Tool MCP rileva errore e ritorna messaggio user-friendly:
+\begin{verbatim}
+{
+  "success": false,
+  "error": "Token scaduto, effettua nuovo login",
+  "statusCode": 401
+}
+\end{verbatim}
+\item AI Assistant può invocare tool \texttt{Login} per ottenere nuovo token
+\item Operazione originale può essere ritentata
+\end{enumerate}
+
+\paragraph{Vantaggi Bearer Token:}
+
+\begin{itemize}
+\item \textbf{Simplicità:} Schema standardizzato, facile da implementare
+\item \textbf{Stateless:} Nessuna sessione server-side
+\item \textbf{Compatibilità:} Supportato da tutti i client HTTP
+\item \textbf{Sicurezza:} Token opaco per client, validato solo da server
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{CORS e Cross-Origin Security}
+\label{subsec:cors}
+%----------------------------------------------------------------------------------------
+
+CORS (Cross-Origin Resource Sharing) è un meccanismo di sicurezza del browser che controlla se una pagina web può effettuare richieste HTTP a un dominio diverso da quello di origine.
+
+\paragraph{Problema Same-Origin Policy:}
+
+Per sicurezza, i browser bloccano richieste JavaScript a domini diversi (diverso protocollo, dominio o porta). Esempio:
+\begin{itemize}
+\item Pagina: \texttt{https://app.markuno.com}
+\item API: \texttt{https://api.markuno.com} (dominio diverso \(\rightarrow\) bloccato)
+\item SignalR: \texttt{https://signalr.markuno.com:7193} (dominio e porta diversi \(\rightarrow\) bloccato)
+\end{itemize}
+
+\paragraph{Soluzione CORS:}
+
+Il server deve inviare header HTTP che autorizzano l'origin della richiesta:
+
+\begin{verbatim}
+Access-Control-Allow-Origin: https://app.markuno.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+Access-Control-Allow-Headers: Authorization, Content-Type
+Access-Control-Allow-Credentials: true
+\end{verbatim}
+
+\paragraph{CORS Preflight Request:}
+
+Per richieste "non semplici" (es. con header Authorization), il browser invia prima una richiesta OPTIONS (preflight) per chiedere permesso:
+
+\begin{enumerate}
+\item Browser invia OPTIONS request con header:
+\begin{verbatim}
+Origin: https://app.markuno.com
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: Authorization
+\end{verbatim}
+
+\item Server risponde con header CORS:
+\begin{verbatim}
+Access-Control-Allow-Origin: https://app.markuno.com
+Access-Control-Allow-Methods: POST
+Access-Control-Allow-Headers: Authorization
+\end{verbatim}
+
+\item Se permesso, browser invia richiesta effettiva POST
+\end{enumerate}
+
+\paragraph{Configurazione CORS nel Progetto:}
+
+Nel SignalR Server (IwineHub), configurazione ASP.NET Core:
+
+\begin{verbatim}
+builder.Services.AddCors(options => {
+    options.AddPolicy("Production", policy => {
+        policy.WithOrigins(
+            "https://configurator.markuno.com",
+            "https://app.markuno.com"
+        )
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials(); // Necessario per SignalR
+    });
+    
+    options.AddPolicy("Development", policy => {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+app.UseCors(environment.IsDevelopment() ? "Development" : "Production");
+\end{verbatim}
+
+\paragraph{CORS per SignalR:}
+
+SignalR richiede \texttt{AllowCredentials()} perché utilizza cookie o token per autenticazione. Questo implica che \texttt{AllowAnyOrigin()} non può essere usato in produzione (security risk), ma solo origin specifici.
+
+\paragraph{Security Best Practices CORS:}
+
+\begin{itemize}
+\item \textbf{Whitelist Explicit Origins:} Mai usare \texttt{AllowAnyOrigin()} in produzione
+\item \textbf{Least Privilege:} Specificare solo Methods/Headers necessari
+\item \textbf{HTTPS Only:} CORS con credenziali richiede HTTPS
+\item \textbf{Validation Server-Side:} CORS è controllo browser, validare sempre input server-side
+\item \textbf{Environment-Specific:} Policy diverse per Development vs Production
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\section{Configuratori 3D: Panoramica e Contesto}
+\label{sec:configuratori-3d}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione introduce il concetto di configuratori 3D e il loro ruolo nel progetto,
+% fornendo contesto per comprendere le sfide dell'integrazione AI-3D.
+
+%----------------------------------------------------------------------------------------
+\subsection{Cosa sono i Configuratori 3D}
+\label{subsec:cosa-sono-configuratori}
+%----------------------------------------------------------------------------------------
+
+I configuratori 3D sono applicazioni software interattive che permettono agli utenti di personalizzare prodotti complessi (mobili, cucine, interni, veicoli) visualizzando in tempo reale il risultato in un ambiente tridimensionale.
+
+\paragraph{Caratteristiche Principali:}
+
+\begin{itemize}
+\item \textbf{Rendering 3D Real-Time:} Utilizzo di tecnologie WebGL, Three.js, Unity o Unreal Engine per rendering interattivo nel browser o desktop
+
+\item \textbf{Parametrizzazione Prodotti:} Gestione di cataloghi con migliaia di articoli, ognuno con parametri (dimensioni, colori, finiture, accessori)
+
+\item \textbf{Regole di Configurazione:} Engine che valida combinazioni valide (es. scaffale larghezza 80cm compatibile solo con ante specifiche)
+
+\item \textbf{Calcolo Prezzi Dinamico:} Aggiornamento in tempo reale del prezzo totale in base a configurazione corrente
+
+\item \textbf{Esportazione Dati:} Generazione documenti tecnici (preventivi, distinte materiali, disegni CAD)
+\end{itemize}
+
+\paragraph{Architettura Tipica:}
+
+\begin{itemize}
+\item \textbf{Frontend:} Interfaccia utente per selezione prodotti e visualizzazione 3D
+\item \textbf{Backend:} API REST per catalogo prodotti, salvataggio progetti, calcolo prezzi
+\item \textbf{Engine 3D:} Libreria rendering (Three.js, Babylon.js) che gestisce scene, luci, telecamere
+\item \textbf{Database:} Catalogo prodotti con geometrie 3D (mesh, texture) e metadati
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{Casi d'Uso e Applicazioni}
+\label{subsec:casi-uso-configuratori}
+%----------------------------------------------------------------------------------------
+
+I configuratori 3D sono utilizzati in diversi settori:
+
+\begin{itemize}
+\item \textbf{Arredamento e Interior Design:} Configurazione cucine, soggiorni, uffici (es. IKEA Home Planner, Nolte Küchen)
+
+\item \textbf{Automotive:} Personalizzazione veicoli con optional, colori, interni (es. BMW Individual, Porsche Car Configurator)
+
+\item \textbf{Architettura e Edilizia:} Progettazione spazi, scelta materiali, visualizzazione render
+
+\item \textbf{Manufacturing B2B:} Configurazione macchinari industriali, impianti, sistemi modulari
+
+\item \textbf{E-commerce Premium:} Prodotti custom (gioielli, biciclette, abbigliamento su misura)
+\end{itemize}
+
+\paragraph{Vantaggi per Clienti:}
+
+\begin{itemize}
+\item Visualizzazione realistica del prodotto finale prima dell'acquisto
+\item Maggiore coinvolgimento (engagement) e riduzione incertezza
+\item Esplorazione illimitata di varianti senza vincoli fisici showroom
+\item Decisioni più consapevoli, riduzione resi
+\end{itemize}
+
+\paragraph{Vantaggi per Aziende:}
+
+\begin{itemize}
+\item Riduzione errori ordine (configurazione validata da engine)
+\item Automazione processo preventivazione
+\item Raccolta dati su preferenze clienti (analytics configurazioni)
+\item Differenziazione competitiva (esperienza utente premium)
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\subsection{Sfide dell'Integrazione AI-3D}
+\label{subsec:sfide-integrazione-ai-3d}
+%----------------------------------------------------------------------------------------
+
+L'integrazione di AI conversazionale (LLM) con configuratori 3D presenta sfide uniche che motivano questo lavoro di tesi:
+
+\paragraph{Sfide Tecniche:}
+
+\begin{enumerate}
+\item \textbf{Mapping Linguaggio Naturale \(\rightarrow\) Comandi Strutturati:}
+   - Input AI: "Aggiungi uno scaffale bianco largo 80 cm"
+   - Output Configuratore: \texttt{AddArticle(cod: "SP80", params: \{col: "bianco", l: 800\})}
+   - Necessità di interpretare dimensioni, colori, posizioni in formato strutturato
+
+\item \textbf{Sincronizzazione Stato:}
+   - Configuratore mantiene stato progetto (articoli aggiunti, prezzi)
+   - AI deve avere visibilità su stato corrente per suggerimenti contestuali
+   - Necessità di notifiche bidirezionali per aggiornamenti real-time
+
+\item \textbf{Gestione Vincoli e Validazioni:}
+   - Configuratore ha regole complesse (compatibilità, fisica, pricing)
+   - AI potrebbe suggerire configurazioni invalide se non consapevole vincoli
+   - Necessità di feedback loop: AI propone \(\rightarrow\) Configuratore valida \(\rightarrow\) AI adatta
+
+\item \textbf{Latenza e User Experience:}
+   - Utente si aspetta feedback istantaneo su comandi vocali/testuali
+   - Catena AI inference + API calls + rendering 3D deve essere <1-2 secondi
+   - Necessità di comunicazione real-time (WebSocket) invece di polling
+
+\item \textbf{Multimodalità:}
+   - Utente può interagire sia tramite AI che manualmente nel configuratore
+   - Necessità di sincronizzare azioni manuali con contesto AI
+   - Conflitti potenziali: utente modifica manualmente, AI non ne è consapevole
+\end{enumerate}
+
+\paragraph{Sfide Architetturali:}
+
+\begin{itemize}
+\item \textbf{Disaccoppiamento:} Configuratore 3D e MCP Server sono sistemi indipendenti, necessità di bridge (SignalR)
+
+\item \textbf{Protocolli Eterogenei:} MCP usa JSON-RPC, Configuratore usa REST, necessità di traduzione
+
+\item \textbf{Autenticazione Cross-System:} JWT token deve essere valido per MarkunoAPI, SignalR e Configuratore
+
+\item \textbf{Error Handling Distribuito:} Failure può avvenire in MCP, SignalR, MarkunoAPI o Configuratore, necessità di propagazione errori end-to-end
+\end{itemize}
+
+\paragraph{Contributo di Questa Tesi:}
+
+Questo lavoro affronta le sfide sopra attraverso:
+\begin{itemize}
+\item Progettazione di un'architettura dual-channel (REST + SignalR) per sincronizzazione real-time
+\item Implementazione di pattern GET-MODIFY-SAVE per operazioni atomiche complesse
+\item Definizione di tool MCP semanticamente ricchi per mapping linguaggio naturale
+\item Gestione robusta errori con partial success e messaggi user-friendly
+\item Validazione end-to-end con 10+ scenari di test
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+\chapter{Stack Tecnologico}
+\label{chap:stack-tecnologico}
+%----------------------------------------------------------------------------------------
+
+% Questo capitolo approfondisce le tecnologie e gli strumenti utilizzati nel progetto,
+% fornendo motivazioni per ogni scelta tecnologica e spiegando come le diverse
+% componenti si integrano nell'architettura proposta.
+
+%----------------------------------------------------------------------------------------
+\section{Panoramica Architetturale dello Stack}
+\label{sec:panoramica-stack}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione fornisce una visione d'insieme dello stack tecnologico su tre livelli:
+% 
+% Contenuti da sviluppare:
+% - Presentazione layer architetturali: Backend (MCP Server), Bridge (SignalR), Frontend (Configurator3D)
+% - Elenco tecnologie principali per ogni layer con versioni
+% - Diagramma o tabella riassuntiva dello stack completo
+% - Motivazioni scelta stack moderno (.NET 8, TypeScript, cloud-native)
+% - Criteri di selezione: performance, produttività, manutenibilità, ecosistema
+% - Collegamento tra stack tecnologico e requisiti architetturali del capitolo precedente
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Tabella riassuntiva stack per layer, eventuale diagramma
+
+%----------------------------------------------------------------------------------------
+\section{Backend Stack}
+\label{sec:backend-stack}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce le tecnologie .NET utilizzate per il MCP Server
+
+%----------------------------------------------------------------------------------------
+\subsection{.NET 8/9 Platform: Motivazioni e Vantaggi}
+\label{subsec:dotnet-platform}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Presentazione piattaforma .NET (evoluzione da .NET Framework a .NET Core/.NET 5+)
+% - Motivazioni scelta .NET 8 (LTS) o .NET 9 (STS): supporto lungo termine, performance, cross-platform
+% - Confronto con alternative: Python, Node.js, Java, Go
+% - Vantaggi specifici per progetto MCP:
+%   * Performance runtime (JIT compiler, GC ottimizzato)
+%   * Async/await nativo per I/O-bound operations
+%   * Ecosistema ricco (NuGet packages)
+%   * Tooling eccellente (Visual Studio, VS Code)
+%   * Cross-platform deployment (Windows, Linux, Docker)
+% - Statistiche performance (benchmark confronto con altre piattaforme)
+% - Supporto LTS: aggiornamenti sicurezza fino a 3 anni
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Tabella confronto .NET vs alternative, grafico performance
+
+%----------------------------------------------------------------------------------------
+\subsection{C\# 12: Feature Moderne Utilizzate}
+\label{subsec:csharp-features}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Panoramica linguaggio C# versione 12 (ultima release con .NET 8)
+% - Feature moderne sfruttate nel progetto:
+%   * Primary Constructors: riduzione boilerplate per DI
+%   * Collection Expressions: sintassi concisa per liste
+%   * Pattern Matching avanzato: switch expressions per gestione errori HTTP
+%   * Nullable Reference Types: prevenzione NullReferenceException
+%   * Records: immutabilità per DTOs
+%   * Async/await: gestione asincrona I/O
+% - Esempi codice concreto dal progetto per ogni feature
+% - Vantaggi type-safety: errori compile-time invece di runtime
+% - Produttività sviluppo: meno codice, più leggibile
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippets per ogni feature
+
+%----------------------------------------------------------------------------------------
+\subsection{ASP.NET Core: Framework Web}
+\label{subsec:aspnet-core}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Presentazione framework ASP.NET Core per applicazioni web/API
+% - Utilizzo nel progetto anche se MCP Server non è web server classico:
+%   * Dependency Injection container (Microsoft.Extensions.DependencyInjection)
+%   * Configuration system (Microsoft.Extensions.Configuration)
+%   * Logging infrastructure (Microsoft.Extensions.Logging)
+%   * Middleware pipeline per hosting service
+% - Vantaggi framework maturo: best practices consolidate
+% - Integration con MCP SDK: hosting as console application con ASP.NET services
+% - Kestrel web server per IwineHub SignalR bridge
+% 
+% Pagine stimate: 1-2
+% Elementi visivi: Diagramma architettura ASP.NET Core utilizzata
+
+%----------------------------------------------------------------------------------------
+\subsection{MCP SDK: Implementazione Protocollo}
+\label{subsec:mcp-sdk}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Presentazione package NuGet ModelContextProtocol (versione utilizzata)
+% - Componenti SDK:
+%   * McpServer: classe base per server MCP
+%   * Tool Attributes: [McpTool], [McpToolParam] per decorazione metodi
+%   * JSON-RPC handler: parsing automatico messaggi
+%   * Stdio transport: comunicazione via stdin/stdout
+%   * Reflection-based discovery: scansione automatica tool
+% - Workflow implementazione tool:
+%   1. Definire classe con metodi pubblici
+%   2. Decorare con [McpTool] e [McpToolParam]
+%   3. Registrare in DI container
+%   4. SDK genera automaticamente schema JSON
+% - Vantaggi SDK: riduce boilerplate, type-safe, documentazione automatica
+% - Limitazioni: reflection overhead (accettabile per use case)
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippet tool definition, diagramma flusso tool invocation
+
+%----------------------------------------------------------------------------------------
+\section{Comunicazione e Serializzazione}
+\label{sec:comunicazione-serializzazione}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce tecnologie per comunicazione HTTP/WebSocket e serializzazione dati
+
+%----------------------------------------------------------------------------------------
+\subsection{HttpClient: Gestione Chiamate REST}
+\label{subsec:httpclient}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Classe HttpClient per chiamate HTTP in .NET
+% - Anti-pattern comune: creazione multipla istanze HttpClient → socket exhaustion
+% - Pattern corretto: IHttpClientFactory per pooling connessioni
+% - Vantaggi IHttpClientFactory:
+%   * Socket pooling e reuse
+%   * DNS refresh automatico
+%   * Named/typed clients per configurazioni multiple
+%   * Handler pipeline per cross-cutting concerns (auth, logging, retry)
+% - Implementazione nel progetto:
+%   * DelegatingHandler per Authorization header automatico
+%   * Timeout configuration
+%   * Error handling e retry logic
+% - Best practices: async/await, cancellation tokens, disposing
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippet IHttpClientFactory setup, diagramma handler pipeline
+
+%----------------------------------------------------------------------------------------
+\subsection{SignalR Client: Comunicazione Real-Time}
+\label{subsec:signalr-client}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Package Microsoft.AspNetCore.SignalR.Client per connessione a hub SignalR
+% - HubConnection: rappresenta connessione persistente WebSocket
+% - Configurazione client:
+%   * HubConnectionBuilder per setup
+%   * withUrl: endpoint hub e opzioni (access token factory)
+%   * withAutomaticReconnect: backoff esponenziale per riconnessione
+%   * configureLogging: level logging per debugging
+% - Gestione eventi:
+%   * On(): registrazione handler per metodi hub
+%   * InvokeAsync(): chiamata metodi server-side
+%   * OnConnected, OnDisconnected, OnReconnecting callbacks
+% - Implementazione SignalRService nel progetto come wrapper
+% - Thread-safety: lock per gestione handler concorrenti
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippet connection setup, diagramma lifecycle connessione
+
+%----------------------------------------------------------------------------------------
+\subsection{System.Text.Json: Serializzazione JSON}
+\label{subsec:system-text-json}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Serializer JSON nativo .NET (introdotto .NET Core 3.0)
+% - Confronto con Newtonsoft.Json:
+%   * Performance: 2-3x più veloce, 50% meno allocazioni memoria
+%   * API minimalista vs ricchissima
+%   * Integrazione nativa ASP.NET Core
+%   * Supporto Microsoft garantito
+% - Motivazione scelta per progetto: performance critica per messaggi MCP/SignalR
+% - Configurazione JsonSerializerOptions:
+%   * PropertyNamingPolicy: camelCase per JSON API-friendly
+%   * DefaultIgnoreCondition: ignora null per payload compatto
+%   * PropertyNameCaseInsensitive: parsing robusto
+% - Attributi customizzazione: [JsonPropertyName], [JsonIgnore], [JsonConverter]
+% - Gestione errori: JsonException handling
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Tabella confronto performance, code snippet configurazione
+
+%----------------------------------------------------------------------------------------
+\subsection{JSON-RPC 2.0 nel contesto MCP}
+\label{subsec:json-rpc-mcp}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Protocollo JSON-RPC 2.0: standard lightweight per RPC su JSON
+% - Struttura messaggi:
+%   * Request: { jsonrpc, method, params, id }
+%   * Response success: { jsonrpc, result, id }
+%   * Response error: { jsonrpc, error: { code, message }, id }
+%   * Notification: { jsonrpc, method, params } (no id, no response)
+% - Utilizzo in MCP:
+%   * tools/call: invocazione tool da AI
+%   * resources/read: fetch contenuto risorsa
+%   * prompts/get: template prompt
+%   * sampling/createMessage: richiesta inferenza LLM
+% - MCP SDK gestisce automaticamente serializzazione/deserializzazione
+% - Vantaggi JSON-RPC: stateless, bidirezionale, semplice, estensibile
+% - Validazione schema: JSON Schema per type-safety
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Esempi messaggi JSON-RPC, sequence diagram tool invocation
+
+%----------------------------------------------------------------------------------------
+\section{Architettura e Pattern}
+\label{sec:architettura-pattern}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce pattern architetturali e framework utilities .NET
+
+%----------------------------------------------------------------------------------------
+\subsection{Dependency Injection (Microsoft.Extensions.DI)}
+\label{subsec:dependency-injection}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Principio Inversion of Control (IoC) e Dependency Injection
+% - Container DI nativo ASP.NET Core (Microsoft.Extensions.DependencyInjection)
+% - Service Lifetime:
+%   * Transient: nuova istanza ogni request
+%   * Scoped: istanza per scope (HTTP request in web app)
+%   * Singleton: unica istanza per lifetime applicazione
+% - Utilizzo nel progetto:
+%   * MarkunoApiTools: Singleton (stato globale _authToken)
+%   * SignalRService: Singleton (connessione persistente)
+%   * HttpClient: Transient via IHttpClientFactory
+%   * ILogger<T>: Singleton (thread-safe)
+% - Vantaggi DI:
+%   * Testabilità: mock dipendenze per unit test
+%   * Manutenibilità: cambio implementazione senza modificare consumer
+%   * Configurabilità: registrazione centralizzata in Program.cs
+% - Captive Dependency problem: Singleton che dipende da Scoped → memory leak
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma lifetime, code snippet registrazione servizi
+
+%----------------------------------------------------------------------------------------
+\subsection{Configuration Management (IConfiguration)}
+\label{subsec:configuration-management}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Sistema configurazione ASP.NET Core: Microsoft.Extensions.Configuration
+% - Fonti configurazione (ordine priorità):
+%   * appsettings.json: configurazione base
+%   * appsettings.{Environment}.json: override per ambiente
+%   * Environment variables: override per deployment
+%   * User secrets: sviluppo locale (fuori repo)
+%   * Command line arguments: override runtime
+%   * Azure Key Vault: secrets produzione
+% - Accesso configurazione:
+%   * IConfiguration injection: builder.Configuration["key"]
+%   * Options pattern: IOptions<T> per strongly-typed settings
+% - Utilizzo nel progetto:
+%   * AppSettings.json: BaseUrl, MarkunoCredentials, SignalRConfig
+%   * Secrets management: credenziali mai hardcoded
+%   * Environment-specific: Development vs Production
+% - Best practices: externalizzare tutto, secrets encryption
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma fonti configurazione, code snippet IConfiguration
+
+%----------------------------------------------------------------------------------------
+\subsection{Logging Strutturato (ILogger<T>)}
+\label{subsec:logging-strutturato}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Framework logging ASP.NET Core: Microsoft.Extensions.Logging
+% - ILogger<T>: interfaccia generica per logging tipizzato
+% - Log levels: Trace, Debug, Information, Warning, Error, Critical
+% - Logging strutturato:
+%   * Template con placeholders: "Tool {ToolName} invoked"
+%   * Parametri indicizzati per searchability
+%   * Structured data per analytics
+% - Providers/Sinks:
+%   * Console: output console per sviluppo/Docker
+%   * File: Serilog per persistence su disco
+%   * Application Insights: telemetria Azure per produzione
+% - Log scopes: correlazione operazioni complesse (RequestId)
+% - Utilizzo nel progetto:
+%   * Log ogni tool invocation con parametri
+%   * Log errori HTTP con StatusCode e messaggio
+%   * Log lifecycle SignalR (connected, disconnected, reconnecting)
+% - Filtering: log level diversi per ambiente (Debug in dev, Info in prod)
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Tabella log levels, code snippet logging strutturato
+
+%----------------------------------------------------------------------------------------
+\subsection{Async/Await Pattern}
+\label{subsec:async-await}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Programmazione asincrona in C#: async/await keywords
+% - Task Parallel Library (TPL): Task<T> per operazioni asincrone
+% - Vantaggi async/await:
+%   * Non-blocking I/O: thread non bloccato durante wait
+%   * Scalabilità: più richieste concorrenti con meno thread
+%   * Semplicità: codice sequenziale invece di callback hell
+% - Utilizzo nel progetto (tutti tool sono async):
+%   * Chiamate HTTP: await _httpClient.GetAsync()
+%   * Chiamate SignalR: await _hubConnection.InvokeAsync()
+%   * Tool MCP: async Task<object> GetProjectsAsync()
+% - Best practices:
+%   * ConfigureAwait(false) per library code
+%   * CancellationToken per operazioni cancellabili
+%   * Evitare async void (solo event handlers)
+%   * ValueTask<T> per hot path (performance)
+% - Pitfalls: deadlock con .Result, async all the way
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma thread execution async vs sync, code snippet
+
+%----------------------------------------------------------------------------------------
+\section{Frontend e Client Stack}
+\label{sec:frontend-client-stack}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce tecnologie client-side per Configurator3D
+
+%----------------------------------------------------------------------------------------
+\subsection{TypeScript: Type-Safety Client-Side}
+\label{subsec:typescript}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - TypeScript: superset JavaScript con type-checking statico
+% - Motivazioni scelta:
+%   * Type-safety: errori compile-time invece di runtime
+%   * Refactoring sicuro: rename/move con propagazione
+%   * IntelliSense: autocomplete per oggetti complessi
+%   * Documentazione implicita: tipi = contratto
+%   * Integrazione tooling: VS Code, ESLint, Prettier
+% - Features utilizzate:
+%   * Interfaces: definizione tipi Message, CommandMessage, EventMessage
+%   * Union types: type: "command" | "event" | "ack"
+%   * Type guards: runtime validation con narrowing
+%   * Generics: funzioni riusabili type-safe
+% - Compilazione: TypeScript → JavaScript (ES6/ESNext)
+% - Integrazione con SignalR SDK: @microsoft/signalr typed
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippet definizione tipi, confronto JS vs TS
+
+%----------------------------------------------------------------------------------------
+\subsection{@microsoft/signalr SDK}
+\label{subsec:signalr-sdk-client}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Package npm @microsoft/signalr per client browser
+% - Setup connessione:
+%   * HubConnectionBuilder: configurazione endpoint, transport, logging
+%   * withUrl: URL hub + opzioni (accessTokenFactory per JWT)
+%   * withAutomaticReconnect: backoff esponenziale [0, 2000, 5000, 10000]
+%   * build(): crea HubConnection
+% - API connessione:
+%   * start(): avvia connessione (async)
+%   * stop(): chiude connessione
+%   * connectionId: ID univoco assegnato da server
+% - Registrazione handlers:
+%   * on(methodName, handler): callback per metodi invocati da server
+%   * invoke(methodName, ...args): chiamata metodo server con risposta
+%   * send(methodName, ...args): fire-and-forget
+% - Eventi lifecycle:
+%   * onclose: disconnessione (volontaria o errore)
+%   * onreconnecting: tentativo riconnessione in corso
+%   * onreconnected: riconnessione riuscita con nuovo connectionId
+% - Utilizzo nel Configurator3D:
+%   * Ricezione comandi da MCP Server (open, create, list)
+%   * Invio ACK per conferma ricezione
+%   * Gestione UI durante riconnessione
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Code snippet setup connessione, diagramma eventi lifecycle
+
+%----------------------------------------------------------------------------------------
+\subsection{Configurator3D: Integrazione}
+\label{subsec:configurator3d-integration}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - Panoramica applicazione Configurator3D (esistente)
+% - Stack 3D rendering: Three.js / Babylon.js / WebGL
+% - Modifiche per integrazione MCP:
+%   * Aggiunta SignalR client per comunicazione real-time
+%   * Handlers per comandi MCP: open, create, list
+%   * Invio ACK per conferma elaborazione
+%   * Sincronizzazione stato 3D con backend MarkunoAPI
+% - Pattern Observer: registrazione callback per eventi SignalR
+% - Gestione errori: retry connessione, fallback graceful
+% - UI feedback: indicatore connessione, messaggi stato
+% - Deployment: bundle TypeScript → JavaScript, hosting statico
+% 
+% Pagine stimate: 1-2
+% Elementi visivi: Screenshot UI configurator, diagramma integrazione
+
+%----------------------------------------------------------------------------------------
+\section{Sicurezza}
+\label{sec:sicurezza}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione approfondisce aspetti sicurezza del sistema
+
+%----------------------------------------------------------------------------------------
+\subsection{JWT Bearer Authentication}
+\label{subsec:jwt-bearer-auth}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - JSON Web Token (JWT): standard RFC 7519 per token accesso
+% - Struttura JWT: header.payload.signature (Base64Url encoded)
+%   * Header: algoritmo firma (HS256, RS256)
+%   * Payload: claims (sub, name, exp, iat, custom)
+%   * Signature: HMAC/RSA per verificare integrità
+% - Flusso autenticazione nel progetto:
+%   1. Login: POST /api/login con credenziali → riceve JWT
+%   2. Storage: MCP Server salva token in _authToken
+%   3. Uso: header "Authorization: Bearer <token>" per ogni richiesta REST
+%   4. Validazione: MarkunoAPI verifica firma e claims (exp)
+% - Vantaggi JWT:
+%   * Stateless: server non mantiene sessioni
+%   * Self-contained: claims nel token
+%   * Scalabile: no shared state tra istanze
+%   * Cross-domain: CORS-friendly
+% - Security considerations:
+%   * Expiration time: 15-30 minuti tipicamente
+%   * HTTPS only: mai trasmettere su HTTP
+%   * Secret protection: chiave firma robusta e segreta
+%   * Token refresh: refresh token per sessioni lunghe
+%   * Revocation: JWT non revocabili (workaround: blacklist, short exp)
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma struttura JWT, sequence diagram autenticazione
+
+%----------------------------------------------------------------------------------------
+\subsection{HTTPS/WSS: Transport Security}
+\label{subsec:https-wss}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - HTTPS: HTTP su TLS 1.2/1.3 per cifratura trasporto
+% - Enforcing HTTPS in ASP.NET Core:
+%   * UseHttpsRedirection: redirect automatico HTTP → HTTPS
+%   * UseHsts: HTTP Strict Transport Security header (max-age=31536000)
+% - Certificati TLS:
+%   * Sviluppo: self-signed con dotnet dev-certs https
+%   * Produzione: Let's Encrypt o commercial CA
+%   * Azure: certificati managed da Azure App Service
+% - WSS (WebSocket Secure): WebSocket su TLS
+%   * Upgrade da HTTPS: negotiate → ws upgrade → TLS handshake
+%   * Tutti messaggi SignalR cifrati end-to-end
+% - Vantaggi transport security:
+%   * Confidenzialità: messaggi cifrati (MITM protection)
+%   * Integrità: TLS garantisce no tampering
+%   * Autenticazione: certificato server verifica identità
+% - Best practices:
+%   * TLS 1.2 minimum (1.3 preferred)
+%   * Strong cipher suites
+%   * Certificate pinning per app mobile
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma TLS handshake, tabella cipher suites
+
+%----------------------------------------------------------------------------------------
+\subsection{CORS Configuration}
+\label{subsec:cors-configuration}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare:
+% - CORS (Cross-Origin Resource Sharing): meccanismo sicurezza browser
+% - Same-Origin Policy: browser blocca richieste cross-domain
+% - Problema nel progetto:
+%   * Configurator3D (https://configurator.markuno.com)
+%   * SignalR Hub (https://signalr.markuno.com)
+%   * Domini diversi → bloccato da CORS
+% - Soluzione: server invia header Access-Control-*
+%   * Access-Control-Allow-Origin: whitelist origins
+%   * Access-Control-Allow-Methods: GET, POST, etc.
+%   * Access-Control-Allow-Headers: Authorization, Content-Type
+%   * Access-Control-Allow-Credentials: true (per SignalR)
+% - Configurazione ASP.NET Core:
+%   * AddCors: definizione policy (Development vs Production)
+%   * UseCors: applicazione middleware
+%   * Policy Production: whitelist explicit origins
+%   * Policy Development: AllowAnyOrigin (solo dev!)
+% - Preflight request: OPTIONS request per validazione permessi
+% - CORS per SignalR:
+%   * AllowCredentials required
+%   * Cannot use AllowAnyOrigin with credentials
+% - Security best practices:
+%   * Never AllowAnyOrigin in produzione
+%   * Least privilege: only necessary methods/headers
+%   * HTTPS required con credentials
+%   * Validate input server-side (CORS è controllo client)
+% 
+% Pagine stimate: 2-3
+% Elementi visivi: Diagramma preflight request, code snippet CORS config
+
+
+%----------------------------------------------------------------------------------------
+\chapter{Progettazione del Sistema}
+\label{chap:progettazione}
+%----------------------------------------------------------------------------------------
+
+%----------------------------------------------------------------------------------------
+\section{Architettura Generale del Sistema}
+\label{sec:architettura-generale}
+%----------------------------------------------------------------------------------------
+
+% Panoramica dell'architettura a tre livelli:
+% - Livello MCP Server: MarkunoApiTools espone tool MCP per l'AI Assistant
+% - Livello Bridge: SignalRService gestisce comunicazione real-time
+% - Livello External Systems: MarkunoAPI (REST) e Configurator3D (client)
+%
+% Concetti chiave da evidenziare:
+% - Pattern Architetturale: Layered Architecture con separazione responsabilità
+% - Protocolli di comunicazione: HTTP/REST sincrono + SignalR asincrono
+% - Dependency Injection: configurazione centralizzata nel Program.cs
+% - Motivazioni: Isolamento tra componenti, testabilità, manutenibilità
+%
+% Diagramma: diagram_1_overview.mmd
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\section{Sistema di Configurazione e Bootstrap}
+\label{sec:configurazione-bootstrap}
+%----------------------------------------------------------------------------------------
+
+% Gestione della configurazione applicativa:
+% - AppSettings: struttura con BaseUrl, MarkunoCredentials, SignalRConfig
+% - Pattern Dependency Injection: registrazione servizi singleton
+% - IConfiguration: caricamento da appsettings.json
+% - Responsabilità Program.cs: load config → register services → configure MCP
+%
+% Concetti chiave:
+% - Externalizzazione configurazione: zero hardcoding
+% - Environment-specific settings: appsettings.Development.json, appsettings.Production.json
+% - Singleton pattern: SignalRService condiviso tra tool
+% - Security: credenziali in file esclusi da version control
+%
+% Diagramma: diagram_2_configuration.mmd
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\section{Servizio di Comunicazione Real-Time}
+\label{sec:servizio-signalr}
+%----------------------------------------------------------------------------------------
+
+% Architettura del SignalRService:
+% - Campi privati: _hubConnection, _logger, _isConnected, _receiveHandlers
+% - Metodi pubblici: ConnectAsync, SendCommandAsync, CallHubMethodAsync, OnReceiveMessage
+% - HubConnection lifecycle: build → start → reconnect → dispose
+%
+% Funzionalità avanzate:
+% - Auto-reconnessione: tentativi multipli con intervalli crescenti (0s, 2s, 5s, 10s)
+% - Multiple endpoint fallback: prova URL base, URL+/hub, URL+/configuratorHub
+% - Event handling: registrazione handler per messaggi in arrivo
+% - Self-signed certificate support: per ambiente di sviluppo
+%
+% Concetti chiave:
+% - Observer Pattern: registrazione callback per ReceiveMessage
+% - Resilienza: retry logic automatico
+% - Logging: tracciamento stati connessione
+% - Threading safety: gestione concorrente handler
+%
+% Diagramma: diagram_3_signalr_service.mmd
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Infrastruttura SignalR e WebSocket}
+\label{sec:infrastruttura-signalr}
+%----------------------------------------------------------------------------------------
+
+% Questa sezione descrive in dettaglio l'architettura del bridge SignalR esistente
+% utilizzato come layer di comunicazione real-time tra MCP Server e Configurator 3D.
+% Il bridge implementa il pattern Hub di SignalR e gestisce tutti gli aspetti della
+% comunicazione WebSocket, inclusi routing, broadcasting e comunicazione point-to-point.
+
+%----------------------------------------------------------------------------------------
+\subsection{Architettura Multi-Layer del Bridge}
+\label{subsec:architettura-bridge}
+%----------------------------------------------------------------------------------------
+
+% Architettura a livelli del sistema SignalR:
+%
+% CLIENT LAYER:
+% - Web Application (TypeScript/JavaScript)
+% - Mobile Application (Native/Hybrid)
+% - Desktop Application (.NET/Electron)
+% - Configurator3D (client grafico specifico del progetto)
+%
+% TRANSPORT LAYER:
+% - WebSocket Protocol (preferito): comunicazione bidirezionale full-duplex
+% - Server-Sent Events (fallback): per browser senza supporto WebSocket
+% - Long Polling (fallback finale): massima compatibilità
+% - Fallback automatico gestito da SignalR Client SDK
+%
+% SIGNALR CORE LAYER:
+% - SignalR Client SDK (@microsoft/signalr)
+% - Connection Manager: gestione ciclo di vita connessioni
+% - Protocol Handler: serializzazione/deserializzazione (JSON/MessagePack)
+%
+% APPLICATION LAYER (IwineHub):
+% - CORS Middleware: gestione Cross-Origin Resource Sharing
+% - Authentication: validazione JWT token
+% - IwineHub: hub principale per routing messaggi
+% - IClient Interface: contratto strongly-typed per comunicazione server-to-client
+%
+% BUSINESS LAYER:
+% - Message Handler: gestione ciclo di vita messaggi
+% - Routing Engine: instradamento basato su Action/Route
+% - Validation Service: validazione struttura e contenuto messaggi
+%
+% INFRASTRUCTURE LAYER:
+% - Configuration: gestione appsettings.json
+% - Service Extensions: extension methods per configurazione servizi
+% - Logging: sistema logging centralizzato (ILogger)
+%
+% DATA LAYER:
+% - Message DTO: Data Transfer Object per messaggi
+% - Hub Context: contesto runtime con informazioni connessioni
+%
+% Concetti chiave:
+% - Separation of Concerns: ogni layer ha responsabilità specifiche
+% - Transport Agnostic: fallback automatico tra protocolli
+% - Strongly-Typed Hub: type-safety per comunicazione server-to-client
+% - Dependency Injection: configurazione servizi via extension methods
+%
+% Diagramma: 05-component-diagram.md (diagramsSignalR)
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\subsection{Modello delle Classi e Pattern Hub}
+\label{subsec:modello-classi-hub}
+%----------------------------------------------------------------------------------------
+
+% Struttura delle classi principali del sistema SignalR:
+%
+% IwineHub (extends Hub<IClient>):
+% - Componente centrale che gestisce tutte le comunicazioni SignalR
+% - Metodi principali:
+%   - SendMessage(Message message): broadcasting o routing messaggi
+%   - SendConnectionId(string receiverId, string senderId): scambio ConnectionId
+% - Proprietà ereditate da Hub<T>:
+%   - Clients: IHubCallerClients<IClient> per invocare metodi su client
+%   - Context: HubCallerContext con info connessione corrente
+%   - Groups: IGroupManager per gestione gruppi client
+% - Eventi lifecycle:
+%   - OnConnectedAsync(): invocato alla connessione client
+%   - OnDisconnectedAsync(Exception): invocato alla disconnessione
+%
+% IClient (interface):
+% - Definisce contratto per metodi invocabili sui client (Strongly-Typed Hub)
+% - Metodi:
+%   - GetMessage(Message message): riceve messaggi broadcast o diretti
+%   - GetConnectionId(string connectionId): riceve ConnectionId di altro client
+%
+% Message (DTO):
+% - Data Transfer Object per trasferimento messaggi tra client
+% - Proprietà:
+%   - Action (string): tipo di azione da eseguire (open, create, list_elements, etc.)
+%   - Name (string): nome messaggio/evento
+%   - Route (string): percorso destinazione per routing
+%   - Params (object): parametri dinamici associati (receiverId, payload, etc.)
+%
+% Program (static):
+% - Configurazione e bootstrap applicazione ASP.NET Core
+% - Responsabilità:
+%   - ConfigureServices(): registrazione servizi (AddSignalR, AddCors, AddAuth)
+%   - ConfigureMiddleware(): pipeline middleware (UseCors, UseAuth, MapHub)
+%
+% IServiceCollectionExtensions (static):
+% - Extension methods per configurazione modulare
+% - Metodi:
+%   - AddCustomAuthentication(): configura JWT Bearer authentication
+%   - AddCustomAuthorization(): configura policy autorizzazione
+%
+% Concetti chiave:
+% - Hub Pattern: centralizzazione routing messaggi real-time
+% - Strongly-Typed Hub: type-safety tramite interfaccia IClient
+% - DTO Pattern: Message come contratto dati tra client/server
+% - Extension Methods: configurazione modulare e riutilizzabile
+% - Lifecycle Hooks: OnConnectedAsync/OnDisconnectedAsync per gestione eventi
+%
+% Diagramma: 01-class-diagram.md (diagramsSignalR)
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\subsection{Gestione del Ciclo di Vita delle Connessioni}
+\label{subsec:lifecycle-connessioni}
+%----------------------------------------------------------------------------------------
+
+% Fasi della connessione client-server SignalR:
+%
+% FASE 1 - NEGOZIAZIONE (HTTP Negotiate):
+% - Client SignalR SDK invia HTTP POST a /hub/negotiate
+% - Server risponde con:
+%   - Connection Token: identificatore univoco negoziazione
+%   - Available Transports: lista trasporti supportati [WebSocket, SSE, LongPolling]
+%   - Negotiation Version: versione protocollo SignalR
+%
+% FASE 2 - UPGRADE WEBSOCKET:
+% - Se WebSocket supportato, client richiede HTTP Upgrade
+% - Header: Connection: Upgrade, Upgrade: websocket
+% - Handshake WebSocket (RFC 6455)
+% - Server accetta: StatusCode 101 Switching Protocols
+% - Connessione TCP persistente stabilita
+%
+% FASE 3 - REGISTRAZIONE HUB:
+% - Server invoca IwineHub.OnConnectedAsync()
+% - Hub ottiene ConnectionId dal Context (GUID univoco)
+% - Hub invia ConnectionId al client via IClient.GetConnectionId()
+% - Client salva ConnectionId per comunicazioni future
+%
+% FASE 4 - FASE OPERATIVA:
+% - Client e server possono scambiare messaggi bidirezionalmente
+% - Client invoca metodi hub: SendMessage(message)
+% - Server invoca metodi client: Clients.Client(id).GetMessage(message)
+% - Keep-alive automatico gestito da SignalR (ping/pong)
+%
+% FASE 5 - DISCONNESSIONE:
+% - Disconnessione può essere:
+%   - Esplicita: client chiama connection.stop()
+%   - Implicita: timeout, network error, server shutdown
+% - Server invoca IwineHub.OnDisconnectedAsync(Exception)
+% - Hub rilascia risorse (rimuove da gruppi, cleanup stato)
+% - ConnectionId viene invalidato
+%
+% Stati della connessione (State Machine):
+% - Disconnected: stato iniziale, nessuna connessione
+% - Connecting: tentativo connessione in corso (timeout 30s)
+% - Connected: connessione stabilita, ConnectionId ricevuto
+% - Active: stato operativo con sotto-stati:
+%   - Idle: pronto per send/receive
+%   - Sending: invio messaggio in corso
+%   - WaitingACK: attesa conferma server
+%   - Receiving: ricezione messaggio in corso
+%   - Processing: elaborazione messaggio
+%   - Error: errore temporaneo con retry
+% - Reconnecting: tentativo riconnessione automatica (max 5 tentativi, backoff esponenziale)
+% - Disconnecting: disconnessione in corso
+%
+% Concetti chiave:
+% - Handshake HTTP: negoziazione protocollo e trasporto
+% - WebSocket Upgrade: transizione da HTTP a WS
+% - ConnectionId: identificatore univoco per routing P2P
+% - State Machine: gestione robusta stati connessione
+% - Keep-Alive: mantenimento connessione con ping/pong automatici
+% - Graceful Shutdown: cleanup risorse in disconnessione
+%
+% Diagrammi: 
+% - 02-sequence-connection.md (sequence diagram connessione)
+% - 07-state-diagram.md (state machine connessione)
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\subsection{Pattern di Comunicazione: Broadcasting e Point-to-Point}
+\label{subsec:pattern-comunicazione}
+%----------------------------------------------------------------------------------------
+
+% BROADCASTING (Many-to-Many):
+%
+% Meccanismo:
+% - Client mittente invoca SendMessage(message) con Route="/broadcast"
+% - Hub valida messaggio (Action valido, Route presente, Params validi)
+% - Hub invoca Clients.All.GetMessage(message)
+% - SignalR invia messaggio in parallelo a tutti i client connessi
+% - Ogni client elabora messaggio indipendentemente
+%
+% Caratteristiche:
+% - Fire-and-forget: mittente non attende conferma riceventi
+% - Invio parallelo: tutti i client ricevono simultaneamente
+% - Indipendenza: elaborazione autonoma per ogni client
+% - No acknowledgment: nessuna garanzia di ricezione/elaborazione
+%
+% Casi d'uso:
+% - Notifiche di sistema (manutenzione, aggiornamenti)
+% - Eventi globali (nuovo ordine, cambio stato applicazione)
+% - Sincronizzazione dati (cache invalidation)
+% - Broadcasting eventi pubblici
+%
+%
+% POINT-TO-POINT (One-to-One):
+%
+% Meccanismo:
+% FASE 1 - Scambio ConnectionId:
+% - Client A richiede ConnectionId di Client B
+% - Client A invoca SendConnectionId(receiverId: "B", senderId: "A")
+% - Hub verifica esistenza Client B nel Context
+% - Hub invoca Clients.Client("B").GetConnectionId("A")
+% - Client B riceve e salva ConnectionId di A per future comunicazioni
+%
+% FASE 2 - Invio messaggio diretto:
+% - Client A invoca SendMessage(message) con Params.receiverId = "B"
+% - Hub estrae receiverId dai Params
+% - Hub ottiene proxy Client B dal Context: GetClient(receiverId)
+% - Se Client B connesso:
+%   - Hub invoca Clients.Client("B").GetMessage(message)
+%   - Client B elabora messaggio
+%   - Hub risponde a Client A: Delivered (200)
+% - Se Client B disconnesso:
+%   - Hub risponde a Client A: Client offline (404)
+%   - Possibili strategie:
+%     - Message Queue: salva in coda per delivery posticipato
+%     - Push Notification: notifica via email/push
+%     - Retry Logic: tentativo automatico reinvio
+%
+% Caratteristiche:
+% - Bassa latenza: comunicazione diretta senza intermediari
+% - Real-time delivery: se entrambi i client online
+% - Routing efficiente: server gestisce solo instradamento
+% - Acknowledgment opzionale: conferma ricezione se richiesto
+%
+% Casi d'uso:
+% - Chat privata tra utenti
+% - Notifiche personali
+% - Comandi diretti (MCP → Configurator3D)
+% - Sincronizzazione stato tra client specifici
+%
+% Concetti chiave:
+% - Clients.All: broadcasting a tutti i client
+% - Clients.Client(connectionId): targeting client specifico
+% - Clients.Group(groupName): broadcasting a gruppo
+% - ConnectionId Exchange: prerequisito per comunicazione P2P
+% - Offline Handling: gestione client disconnessi
+% - Parallel Processing: elaborazione concorrente messaggi
+%
+% Diagrammi:
+% - 03-sequence-broadcast.md (sequence diagram broadcasting)
+% - 04-sequence-p2p.md (sequence diagram point-to-point)
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\subsection{Flusso di Elaborazione Messaggi}
+\label{subsec:flusso-elaborazione}
+%----------------------------------------------------------------------------------------
+
+% Pipeline completa di elaborazione messaggi dal client al server:
+%
+% FASE 1 - CLIENT-SIDE: PREPARAZIONE E INVIO
+%
+% Serializzazione:
+% - Client costruisce oggetto Message {Action, Name, Route, Params}
+% - SignalR Client SDK serializza automaticamente in JSON
+% - Esempio: {Action: "notifica", Name: "nuovo_ordine", Route: "/orders/broadcast", 
+%             Params: {orderId: 123, status: "pending"}}
+%
+% Selezione Trasporto:
+% - SignalR sceglie automaticamente miglior trasporto disponibile
+% - Ordine preferenza:
+%   1. WebSocket (preferito): full-duplex, bassa latenza
+%   2. Server-Sent Events: fallback per browser senza WebSocket
+%   3. Long Polling: fallback finale per massima compatibilità
+% - Trasporto trasparente per sviluppatore
+%
+%
+% FASE 2 - SERVER-SIDE: RICEZIONE E VALIDAZIONE
+%
+% Deserializzazione:
+% - Server riceve payload JSON via trasporto
+% - SignalR deserializza automaticamente in oggetto Message
+% - Binding automatico delle proprietà (Action, Name, Route, Params)
+%
+% Validazione:
+% - Controlli eseguiti:
+%   - Message non null
+%   - Action è stringa valida e non vuota
+%   - Route presente e ben formata (pattern regex)
+%   - Params è oggetto valido (può essere null)
+% - Se validazione fallisce:
+%   - throw HubException("Invalid message format")
+%   - Client riceve errore e può gestirlo
+%
+%
+% FASE 3 - ROUTING DEL MESSAGGIO
+%
+% Analisi Route:
+% - Route Pattern Matching:
+%   - /broadcast → Clients.All.GetMessage(message)
+%   - /direct/:connectionId → Clients.Client(connectionId).GetMessage(message)
+%   - /group/:groupName → Clients.Group(groupName).GetMessage(message)
+%
+% Estrazione parametri:
+% - Da Route: parsing parametri dinamici (es. :connectionId)
+% - Da Params: lettura proprietà (es. Params.receiverId)
+%
+% Verifica destinatari:
+% - Per route /direct: verifica esistenza connectionId nel Context
+% - Per route /group: verifica esistenza gruppo
+% - Se destinatario non trovato: gestione errore (404 o queue)
+%
+%
+% FASE 4 - INVIO E DELIVERY
+%
+% Invio parallelo (broadcast/group):
+% - SignalR utilizza Task.WhenAll per invio concorrente
+% - Nessun blocco se un client è lento
+% - Fire-and-forget: no attesa conferme
+%
+% Invio singolo (direct):
+% - Invio a client specifico
+% - Possibile attesa acknowledgment se implementato
+%
+%
+% FASE 5 - CLIENT-SIDE: RICEZIONE ED ELABORAZIONE
+%
+% Ricezione evento:
+% - Client riceve evento GetMessage tramite handler registrato
+% - connection.on("GetMessage", (message) => {...})
+%
+% Deserializzazione client:
+% - SignalR deserializza JSON in oggetto Message
+%
+% Elaborazione per Action:
+% - Switch/dispatch basato su message.Action:
+%   - "notifica" → Aggiorna UI, mostra notifica
+%   - "message" → Visualizza messaggio in chat
+%   - "update" → Aggiorna dati in cache/store
+%   - "command" → Esegui comando applicazione (es. open, create)
+%
+% Acknowledgment (opzionale):
+% - Se richiesto, client invia ACK al server
+% - await connection.invoke("SendAck", messageId)
+%
+% Concetti chiave:
+% - Serializzazione automatica: trasparente per sviluppatore
+% - Transport fallback: robustezza connessione
+% - Route-based routing: pattern matching per instradamento
+% - Parallel delivery: performance in broadcasting
+% - Action-based dispatch: pattern command per elaborazione
+% - Optional ACK: conferma ricezione quando necessario
+%
+% Diagramma: 08-data-flow-diagram.md (flowchart elaborazione completa)
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\subsection{Integrazione con l'Architettura MCP}
+\label{subsec:integrazione-mcp-signalr}
+%----------------------------------------------------------------------------------------
+
+% Collegamento tra bridge SignalR e architettura MCP complessiva:
+%
+% RUOLO DEL BRIDGE SIGNALR:
+% - Layer intermedio tra MCP Server e Configurator3D client
+% - Traduzione comandi MCP in messaggi SignalR
+% - Gestione comunicazione bidirezionale real-time
+% - Notifiche asincrone da client a MCP
+%
+% FLUSSO DI INTEGRAZIONE:
+%
+% 1. AI Assistant → MCP Server:
+%    - Prompt testuale: "Apri il progetto Cucina Milano"
+%    - MCP traduce in tool call: OpenProject(projectName: "Cucina Milano")
+%
+% 2. MCP Server → SignalRService:
+%    - Tool invoca SignalRService.SendMessage()
+%    - Costruisce Message: {Action: "open", Name: projectId, Route: "/direct/:connectionId"}
+%    - SignalRService invoca IwineHub tramite HubConnection
+%
+% 3. IwineHub → Configurator3D:
+%    - Hub instrada messaggio: Clients.Client(receiverId).GetMessage(message)
+%    - Client riceve comando via WebSocket
+%    - Client elabora: carica progetto, aggiorna vista 3D
+%
+% 4. Configurator3D → MCP Server (response):
+%    - Client invia risposta: connection.invoke("SendMessage", responseMessage)
+%    - IwineHub riceve e instrada a MCP connectionId
+%    - SignalRService riceve via handler OnReceiveMessage
+%    - MCP tool completa e risponde ad AI Assistant
+%
+% VANTAGGI DELL'INTEGRAZIONE:
+% - Disaccoppiamento: MCP non dipende da dettagli SignalR
+% - Real-time: aggiornamenti istantanei senza polling
+% - Bidirezionalità: comunicazione full-duplex
+% - Scalabilità: SignalR gestisce multiple connessioni
+% - Resilienza: riconnessione automatica gestita da SignalRService
+%
+% CONSIDERAZIONI DI DESIGN:
+% - SignalRService come singleton: condiviso tra tutti i tool MCP
+% - Message DTO unificato: contratto comune MCP/SignalR/Client
+% - ConnectionId mapping: gestione identificatori tra layer
+% - Error handling: propagazione errori tra layer
+% - Timeout management: gestione timeout operazioni asincrone
+%
+% Concetti chiave:
+% - Bridge Pattern: SignalR come mediatore tra MCP e Client
+% - Layered Architecture: separazione responsabilità tra layer
+% - Message-Oriented Middleware: comunicazione basata su messaggi
+% - Async/Await: gestione operazioni asincrone end-to-end
+% - Singleton Service: istanza condivisa SignalRService
+%
+% Diagrammi: tutti i diagrammi precedenti mostrano aspetti di questa integrazione
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\section{Sistema di Autenticazione}
+\label{sec:autenticazione}
+%----------------------------------------------------------------------------------------
+
+% Modello di autenticazione:
+% - User model: Id, Name, Email, Level, Token, Ruoli, Nome, Cognome
+% - LoginResponse/LoginData DTO: wrapping risposta API
+% - Bearer Token: JWT salvato in campo statico _authToken
+% - Metodi: Login, Logout, CheckAuthStatus, AutoLoginIfNeeded
+%
+% Flusso di autenticazione:
+% 1. Ricezione credenziali (user-provided o da config)
+% 2. POST /api/login → MarkunoAPI
+% 3. Estrazione token da LoginResponse
+% 4. Salvataggio in variabile statica per richieste future
+% 5. Header "Authorization: Bearer {token}" in chiamate successive
+%
+% Concetti chiave:
+% - Stateful authentication: token in memoria per sessione applicativa
+% - Auto-login: credenziali default da appsettings.json
+% - Authorization levels: campo Level e Ruoli per permessi
+% - Security considerations: gestione scadenza token (401 Unauthorized)
+%
+% Diagramma: diagram_4_authentication.mmd
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\section{Gestione Progetti}
+\label{sec:gestione-progetti}
+%----------------------------------------------------------------------------------------
+
+% Modello dati progetti:
+% - Project model: Id, Des, Status, DtCrea, DtMod, Importo, User, Note, dati cliente
+% - ProjectsResponse/ProjectsData DTO: wrapping lista progetti
+% - ProjectField: metadati campi (Cod, Des, Type, Visible, Sort)
+%
+% Operazioni CRUD:
+% - GetProjects: recupero lista con filtro onlyMy
+% - ProjectExists: verifica esistenza per ID o nome (case-insensitive)
+% - CreateProject: creazione via SignalR (invia comando al Configurator3D)
+% - OpenProject: apertura via SignalR + ricerca per nome
+%
+% Concetti chiave:
+% - Repository Pattern: astrazione accesso dati tramite MarkunoAPI
+% - Dual-channel approach: lettura via REST, write operations via SignalR
+% - Search flexibility: ricerca case-insensitive per user experience
+% - Owner tracking: associazione User ai progetti
+%
+% Diagramma: diagram_5_projects.mmd
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Gestione Articoli e Varianti}
+\label{sec:gestione-articoli}
+%----------------------------------------------------------------------------------------
+
+% Sistema catalogo prodotti:
+% - RuleSetItem model: Cod (parametro), Opz (valore), IsDef, IsLock
+% - VariantOptions: Id (catalogo), Name (attributi), Options (mappa chiave-valore)
+%
+% Operazioni:
+% - AddArticle: inserimento articolo + applicazione varianti
+% - GetArticleInfo: recupero metadati articolo da catalogo
+% - GetVariants: recupero opzioni varianti disponibili
+% - SearchCatalogItems: ricerca nel catalogo per categoria/modello
+%
+% Flusso complesso AddArticle (pattern GET-MODIFY-SAVE):
+% 1. POST /muconf/radd → inserimento articolo base, riceve rowId
+% 2. POST /muconf/rget → recupero stato corrente con campo "pars"
+% 3. Modifica locale campo pars applicando ruleset
+% 4. POST /muconf/rsave → salvataggio pars modificato
+% 5. Notifica client 3D via SignalR
+%
+% Concetti chiave:
+% - Command Pattern: operazioni come AddArticle wrappate in tool MCP
+% - GET-MODIFY-SAVE Pattern: lettura → modifica locale → scrittura
+% - Configuration system: ruleset per parametrizzazione articoli
+% - Catalog abstraction: separazione catalogo prodotti da logica business
+%
+% Diagramma: diagram_6_articles_variants.mmd
+% Pagine stimate: 4-5
+
+%----------------------------------------------------------------------------------------
+\section{Protocollo di Messaggistica SignalR}
+\label{sec:protocollo-messaggistica}
+%----------------------------------------------------------------------------------------
+
+% Struttura messaggi:
+% - Message model: Action, Name, Route, Params
+% - Azioni supportate: open, create, list_elements, add_article
+%
+% Comunicazione bidirezionale:
+% - Server → Client: SendHubMessage invia comandi al Configurator3D
+% - Client → Server: ListElements richiede dati, GetLastListElements recupera risposta
+% - Handler registration: EnsureListElementsHandlerRegistered per callback
+%
+% Concetti chiave:
+% - Command Pattern: action come discriminante operazione
+% - Request-Response pattern: messaggi con risposta asincrona
+% - Event-driven architecture: handler registrati per messaggi specifici
+% - Payload caching: _lastListElementsPayload per recupero differito
+%
+% Diagramma: diagram_7_signalr_messages.mmd
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Flussi di Lavoro Principali}
+\label{sec:flussi-lavoro}
+%----------------------------------------------------------------------------------------
+
+%----------------------------------------------------------------------------------------
+\subsection{Caso d'Uso: Login e Recupero Progetti}
+\label{subsec:login-progetti}
+%----------------------------------------------------------------------------------------
+
+% Flusso autenticazione:
+% - Fase 1: Login (username/password → POST /api/login → salva token)
+% - Fase 2: GetProjects (usa token → POST /muconf/plist → lista progetti)
+% - AutoLogin: uso credenziali default se omesse
+% - Gestione errori: 401 Unauthorized se token scaduto
+%
+% Concetti chiave:
+% - Stateful session: token JWT persistente in memoria
+% - Default credentials: facilitazione testing/sviluppo
+% - Bearer authentication: standard HTTP per REST API
+%
+% Diagramma: sequence_1_login_getprojects.mmd
+% Pagine stimate: 2
+
+%----------------------------------------------------------------------------------------
+\subsection{Caso d'Uso: Creazione e Apertura Progetto}
+\label{subsec:creazione-apertura-progetto}
+%----------------------------------------------------------------------------------------
+
+% Flusso creazione progetto:
+% - CreateProject: costruisce Message {action: "create", params: {des, note, open}}
+% - Invio via SignalR → Configurator3D mostra dialog pre-compilato
+% - Client conferma → POST /muconf/pcreate lato client
+% - Opzionale: apertura automatica se open=true
+%
+% Flusso apertura progetto:
+% - OpenProject: ricerca progetto per nome (case-insensitive)
+% - Costruisce Message {action: "open", name: projectId}
+% - Invio via SignalR → Client carica geometrie 3D
+%
+% Concetti chiave:
+% - Dual-channel orchestration: REST per query, SignalR per comandi
+% - User experience: pre-compilazione form, feedback immediato
+% - Case-insensitive search: robustezza ricerca
+% - Error handling: progetto non trovato, SignalR offline
+%
+% Diagramma: sequence_2_create_open_project.mmd
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\subsection{Caso d'Uso: Aggiunta Articolo con Varianti}
+\label{subsec:aggiunta-articolo}
+%----------------------------------------------------------------------------------------
+
+% Flusso completo in 3 fasi:
+%
+% FASE 1 - Inserimento articolo base:
+% - Verifica autenticazione (AutoLoginIfNeeded se necessario)
+% - Prepara body JSON con cod, des, cat, model, catmer, dimensioni (l, a, p)
+% - POST /muconf/radd → riceve rowId
+%
+% FASE 2 - Applicazione varianti (se ruleset presente):
+% - Step 2.1 GET: POST /muconf/rget per recuperare campo "pars" corrente
+% - Step 2.2 MODIFY: applica ruleset modificando pars locale
+%   (Esempio: pars["str"] = "c.01" (colore bianco), pars["fin"] = "m.02" (finitura rovere))
+% - Step 2.3 SAVE: POST /muconf/rsave con pars modificato
+%
+% FASE 3 - Notifica Client 3D (se receiverId fornito):
+% - CallHubMethodAsync("SendMessage", receiverId, {action: "open", name: projectId})
+% - Client riceve notifica → GET /muconf/pget → aggiorna vista 3D
+% - Renderizza nuovo articolo con varianti applicate
+%
+% Concetti chiave:
+% - GET-MODIFY-SAVE Pattern: operazione atomica in 3 step
+% - Parametric configuration: ruleset per personalizzazione articoli
+% - Real-time sync: notifica immediata al client 3D
+% - Graceful degradation: articolo inserito anche se varianti falliscono
+%
+% Diagrammi: diagram_8_sequence_add_article.mmd, sequence_3_add_article_variants.mmd
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\subsection{Caso d'Uso: Comunicazione Bidirezionale}
+\label{subsec:comunicazione-bidirezionale}
+%----------------------------------------------------------------------------------------
+
+% Flusso full-duplex:
+%
+% Request (AI → Client):
+% - ListElements: costruisce Message {action: "list_elements", params: {catalogo, cerca}}
+% - Invio via CallHubMethodAsync → Client esegue ricerca nel catalogo
+%
+% Response (Client → AI):
+% - Client invia risposta: SendMessage con action="list_elements" e params=array risultati
+% - Handler ReceiveMessage attivato → salva payload in _lastListElementsPayload
+% - GetLastListElements recupera risultati salvati
+%
+% Gestione disconnessione/riconnessione:
+% - Evento Closed: _isConnected = false, logging
+% - Auto-reconnect SignalR: tentativi automatici con retry intervals
+%
+% Concetti chiave:
+% - Full-duplex communication: bidirezionalità WebSocket
+% - Observer Pattern: callback per messaggi in arrivo
+% - Asynchronous request-response: richiesta e risposta disaccoppiate
+% - Connection resilience: auto-reconnect per continuità servizio
+%
+% Diagramma: sequence_4_signalr_bidirectional.mmd
+% Pagine stimate: 2
+
+%----------------------------------------------------------------------------------------
+\subsection{Caso d'Uso: Gestione Errori}
+\label{subsec:gestione-errori}
+%----------------------------------------------------------------------------------------
+
+% Scenari di errore gestiti:
+%
+% 1. Token scaduto (401 Unauthorized):
+%    - Detect error 401 → messaggio "Token scaduto, effettua nuovo login"
+%    - User experience: hint per azione correttiva
+%
+% 2. Progetto non trovato:
+%    - FirstOrDefault() → null → response con availableProjects (primi 10)
+%    - Hint: "Usa GetProjects per lista completa"
+%
+% 3. SignalR offline:
+%    - IsConnected = false → error "SignalR non connesso"
+%    - Hint: "Verifica con CheckSignalRStatus()"
+%
+% 4. Errore validazione API (400 Bad Request):
+%    - Parse error response → extract validCategories/availableParams
+%    - Hint: "Usa SearchCatalogItems per categorie valide"
+%
+% 5. Errore applicazione varianti:
+%    - Articolo inserito ma rsave fallisce → response parziale
+%    - {success: true, variantsApplied: false, variantsError: "..."}
+%
+% 6. Network timeout:
+%    - TaskCanceledException dopo 30s → error "Request timeout"
+%    - Hint: "Riprova o verifica connettività"
+%
+% Concetti chiave:
+% - Defensive programming: validazione input, gestione eccezioni
+% - Meaningful error messages: descrizione errore + hint azione correttiva
+% - Partial success handling: operazioni atomiche con fallback
+% - User-friendly feedback: error messages comprensibili per AI Assistant
+%
+% Diagramma: sequence_5_error_handling.mmd
+% Pagine stimate: 2
+
+%----------------------------------------------------------------------------------------
+\chapter{Implementazione}
+\label{chap:implementazione}
+%----------------------------------------------------------------------------------------
+
+% Questo capitolo descrive gli aspetti implementativi concreti del sistema,
+% includendo scelte tecnologiche, snippet di codice significativi, configurazioni,
+% e dettagli tecnici delle implementazioni dei componenti progettati nel capitolo precedente.
+
+%----------------------------------------------------------------------------------------
+\section{Ambiente di Sviluppo e Setup Progetto}
+\label{sec:ambiente-sviluppo}
+%----------------------------------------------------------------------------------------
+
+% STACK TECNOLOGICO:
+% - .NET 8.0 SDK (target framework)
+% - C# 12 (linguaggio principale)
+% - ASP.NET Core 8.0 (per IwineHub SignalR server)
+% - Visual Studio 2022 / VS Code (IDE)
+% - Git (version control)
+%
+% DIPENDENZE NUGET PRINCIPALI:
+%
+% MCP Server:
+% - ModelContextProtocol (SDK MCP ufficiale)
+% - Microsoft.AspNetCore.SignalR.Client (client SignalR)
+% - System.Text.Json (serializzazione JSON)
+% - Microsoft.Extensions.DependencyInjection (DI container)
+% - Microsoft.Extensions.Logging (logging)
+% - Microsoft.Extensions.Configuration (gestione configurazione)
+%
+% SignalR Bridge Server:
+% - Microsoft.AspNetCore.SignalR (server SignalR)
+% - Microsoft.AspNetCore.Authentication.JwtBearer (autenticazione JWT)
+% - Microsoft.AspNetCore.Cors (gestione CORS)
+%
+% Configurator3D Client:
+% - @microsoft/signalr (JavaScript/TypeScript client)
+% - TypeScript 5.x (type-safety)
+%
+% STRUTTURA PROGETTO:
+% ```
+% MarkunoMCP/
+% ├── MarkunoApiTools/          # MCP Server principale
+% │   ├── Program.cs             # Entry point e configurazione
+% │   ├── MarkunoApiTools.cs     # Tool MCP implementation
+% │   ├── Models/                # DTO e modelli dati
+% │   │   ├── User.cs
+% │   │   ├── Project.cs
+% │   │   ├── Message.cs
+% │   │   └── RuleSetItem.cs
+% │   ├── Services/              # Servizi
+% │   │   └── SignalRService.cs
+% │   └── appsettings.json       # Configurazione
+% │
+% ├── IwineSignalRServer/        # Bridge SignalR
+% │   ├── Program.cs             # ASP.NET Core setup
+% │   ├── Hubs/
+% │   │   └── IwineHub.cs        # Hub SignalR principale
+% │   ├── Interfaces/
+% │   │   └── IClient.cs         # Strongly-typed client interface
+% │   └── appsettings.json
+% │
+% └── Configurator3D/            # Client grafico 3D
+%     ├── src/
+%     │   ├── signalr-client.ts  # Client SignalR
+%     │   └── message-handler.ts # Handler messaggi
+%     └── package.json
+% ```
+%
+% CONFIGURAZIONE APPSETTINGS.JSON:
+% ```json
+% {
+%   "MarkunoApi": {
+%     "BaseUrl": "https://api.markuno.com",
+%     "DefaultUser": "admin",
+%     "DefaultPassword": "***"
+%   },
+%   "SignalR": {
+%     "HubUrl": "https://localhost:7193",
+%     "AllowInsecureCertificates": true
+%   },
+%   "Logging": {
+%     "LogLevel": {
+%       "Default": "Information",
+%       "Microsoft.AspNetCore.SignalR": "Debug"
+%     }
+%   }
+% }
+% ```
+%
+% SETUP AMBIENTE SVILUPPO:
+% 1. Installazione .NET 8.0 SDK
+% 2. Clone repository Git
+% 3. Restore dipendenze NuGet: dotnet restore
+% 4. Configurazione certificati SSL sviluppo: dotnet dev-certs https --trust
+% 5. Setup appsettings.Development.json con credenziali locali
+% 6. Avvio SignalR server: dotnet run --project IwineSignalRServer
+% 7. Avvio MCP server: dotnet run --project MarkunoApiTools
+%
+% Concetti chiave:
+% - Multi-project solution: separazione MCP server e SignalR bridge
+% - Configuration management: appsettings per ambiente
+% - Dependency management: NuGet per pacchetti .NET
+% - SSL/TLS: certificati sviluppo per HTTPS/WSS
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Implementazione MCP Server Core}
+\label{sec:implementazione-mcp-core}
+%----------------------------------------------------------------------------------------
+
+%----------------------------------------------------------------------------------------
+\subsection{Bootstrap e Dependency Injection}
+\label{subsec:bootstrap-di}
+%----------------------------------------------------------------------------------------
+
+% PROGRAM.CS - Entry Point:
+%
+% ```csharp
+% var builder = WebApplication.CreateBuilder(args);
+%
+% // Caricamento configurazione
+% builder.Configuration
+%     .AddJsonFile("appsettings.json", optional: false)
+%     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+%     .AddEnvironmentVariables();
+%
+% // Registrazione servizi
+% builder.Services.AddSingleton<SignalRService>();
+% builder.Services.AddHttpClient<MarkunoApiTools>();
+% builder.Services.AddLogging(config => {
+%     config.AddConsole();
+%     config.AddDebug();
+% });
+%
+% // Configurazione MCP
+% builder.Services.AddMcp(options => {
+%     options.ServerInfo = new ServerInfo {
+%         Name = "markuno-mcp-server",
+%         Version = "1.0.0"
+%     };
+% });
+%
+% var app = builder.Build();
+%
+% // Avvio SignalR connection in background
+% var signalRService = app.Services.GetRequiredService<SignalRService>();
+% await signalRService.ConnectAsync();
+%
+% // Registrazione tool MCP
+% app.MapMcpTool<MarkunoApiTools>();
+%
+% await app.RunAsync();
+% ```
+%
+% DEPENDENCY INJECTION PATTERN:
+% - Singleton per SignalRService: istanza condivisa tra tool
+% - HttpClient factory: gestione pool connessioni HTTP
+% - ILogger injection: logging strutturato per ogni componente
+% - IConfiguration injection: accesso configurazione type-safe
+%
+% LIFECYCLE MANAGEMENT:
+% - Application startup: avvio connessione SignalR
+% - Graceful shutdown: disconnessione pulita SignalR
+% - Background services: keep-alive SignalR connection
+%
+% Concetti chiave:
+% - Dependency Injection Container: Microsoft.Extensions.DI
+% - Configuration providers: JSON, environment variables
+% - Logging abstraction: ILogger<T> per ogni classe
+% - Service lifetimes: Singleton, Scoped, Transient
+%
+% Pagine stimate: 2-3
+
+%----------------------------------------------------------------------------------------
+\subsection{Implementazione Tool MCP}
+\label{subsec:implementazione-tool}
+%----------------------------------------------------------------------------------------
+
+% STRUTTURA CLASSE MARKUNOAPITOOLS:
+%
+% ```csharp
+% public class MarkunoApiTools : McpToolsBase
+% {
+%     private readonly HttpClient _httpClient;
+%     private readonly SignalRService _signalRService;
+%     private readonly ILogger<MarkunoApiTools> _logger;
+%     private readonly IConfiguration _config;
+%     
+%     private static string? _authToken;
+%     private static User? _currentUser;
+%     
+%     public MarkunoApiTools(
+%         HttpClient httpClient,
+%         SignalRService signalRService,
+%         ILogger<MarkunoApiTools> logger,
+%         IConfiguration config)
+%     {
+%         _httpClient = httpClient;
+%         _signalRService = signalRService;
+%         _logger = logger;
+%         _config = config;
+%         
+%         // Configura HttpClient base address
+%         var baseUrl = _config["MarkunoApi:BaseUrl"];
+%         _httpClient.BaseAddress = new Uri(baseUrl);
+%     }
+%     
+%     [McpTool("login", "Autentica utente e ottiene token JWT")]
+%     public async Task<string> Login(
+%         [McpParameter("username")] string? username = null,
+%         [McpParameter("password")] string? password = null)
+%     {
+%         // Usa credenziali da config se non fornite
+%         username ??= _config["MarkunoApi:DefaultUser"];
+%         password ??= _config["MarkunoApi:DefaultPassword"];
+%         
+%         var loginRequest = new { name = username, password };
+%         var response = await _httpClient.PostAsJsonAsync("/api/login", loginRequest);
+%         
+%         if (!response.IsSuccessStatusCode)
+%         {
+%             return JsonSerializer.Serialize(new {
+%                 success = false,
+%                 error = "Login fallito",
+%                 statusCode = (int)response.StatusCode
+%             });
+%         }
+%         
+%         var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+%         _authToken = loginResponse?.Data?.User?.Token;
+%         _currentUser = loginResponse?.Data?.User;
+%         
+%         _logger.LogInformation("Login effettuato per utente {Username}", username);
+%         
+%         return JsonSerializer.Serialize(new {
+%             success = true,
+%             username = _currentUser?.Name,
+%             userId = _currentUser?.Id,
+%             level = _currentUser?.Level
+%         });
+%     }
+%     
+%     private async Task EnsureAuthenticatedAsync()
+%     {
+%         if (string.IsNullOrEmpty(_authToken))
+%         {
+%             await Login();
+%         }
+%     }
+%     
+%     private void AddAuthHeader()
+%     {
+%         if (!string.IsNullOrEmpty(_authToken))
+%         {
+%             _httpClient.DefaultRequestHeaders.Authorization = 
+%                 new AuthenticationHeaderValue("Bearer", _authToken);
+%         }
+%     }
+% }
+% ```
+%
+% ATTRIBUTI MCP:
+% - [McpTool]: marca metodi come tool esposti all'AI
+% - [McpParameter]: definisce parametri con descrizione
+% - Metadata per discovery automatico tool
+%
+% GESTIONE AUTENTICAZIONE:
+% - Token JWT in variabile statica (_authToken)
+% - User corrente in variabile statica (_currentUser)
+% - Auto-login con credenziali default
+% - Header Authorization automatico per richieste HTTP
+%
+% PATTERN ASYNC/AWAIT:
+% - Tutti i metodi tool sono async Task<string>
+% - HttpClient async per chiamate REST API
+% - SignalRService async per comunicazione real-time
+%
+% Concetti chiave:
+% - Attribute-based programming: metadata per tool MCP
+% - Static state: token condiviso tra invocazioni tool
+% - Async programming: operazioni I/O non bloccanti
+% - HttpClient patterns: gestione pool connessioni
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\subsection{Implementazione Tool Complessi}
+\label{subsec:tool-complessi}
+%----------------------------------------------------------------------------------------
+
+% ESEMPIO: IMPLEMENTAZIONE AddArticle CON PATTERN GET-MODIFY-SAVE
+%
+% ```csharp
+% [McpTool("add_article", "Aggiunge articolo con varianti al progetto")]
+% public async Task<string> AddArticle(
+%     [McpParameter("projectId")] string projectId,
+%     [McpParameter("cod")] string cod,
+%     [McpParameter("des")] string des,
+%     [McpParameter("cat")] string cat,
+%     [McpParameter("model")] string model,
+%     [McpParameter("catmer")] string catmer,
+%     [McpParameter("l")] int l,
+%     [McpParameter("a")] int a,
+%     [McpParameter("p")] int p,
+%     [McpParameter("ruleset")] List<RuleSetItem>? ruleset = null,
+%     [McpParameter("receiverId")] string? receiverId = null)
+% {
+%     await EnsureAuthenticatedAsync();
+%     AddAuthHeader();
+%     
+%     // FASE 1: Inserimento articolo base
+%     var articleData = new {
+%         id = projectId,
+%         cod, des, cat, model, catmer,
+%         l, a, p,
+%         tipo = "a",
+%         ruleset = new List<object>(), // Vuoto per ora
+%         note = "",
+%         rule = ""
+%     };
+%     
+%     var addResponse = await _httpClient.PostAsJsonAsync("/muconf/radd", articleData);
+%     if (!addResponse.IsSuccessStatusCode)
+%     {
+%         return ErrorResponse("Errore inserimento articolo", addResponse.StatusCode);
+%     }
+%     
+%     var addResult = await addResponse.Content.ReadFromJsonAsync<ApiResponse>();
+%     var rowId = addResult?.Data?.Data; // Estrai rowId
+%     
+%     _logger.LogInformation("Articolo base inserito, rowId={RowId}", rowId);
+%     
+%     // FASE 2: Applicazione varianti (se presenti)
+%     bool variantsApplied = false;
+%     if (ruleset != null && ruleset.Count > 0)
+%     {
+%         // Step 2.1: GET - Recupera stato corrente
+%         var getRequest = new {
+%             id = projectId,
+%             idr = rowId,
+%             noeval = true
+%         };
+%         var getResponse = await _httpClient.PostAsJsonAsync("/muconf/rget", getRequest);
+%         var getResult = await getResponse.Content.ReadFromJsonAsync<ArticleResponse>();
+%         var pars = getResult?.Data?.Pars ?? new Dictionary<string, string>();
+%         
+%         // Step 2.2: MODIFY - Applica ruleset
+%         foreach (var rule in ruleset)
+%         {
+%             pars[rule.Cod] = rule.Opz;
+%             _logger.LogDebug("Applicata regola: {Cod}={Opz}", rule.Cod, rule.Opz);
+%         }
+%         
+%         // Step 2.3: SAVE - Salva modifiche
+%         var saveRequest = new {
+%             id = projectId,
+%             idr = rowId,
+%             pars
+%         };
+%         var saveResponse = await _httpClient.PostAsJsonAsync("/muconf/rsave", saveRequest);
+%         variantsApplied = saveResponse.IsSuccessStatusCode;
+%         
+%         _logger.LogInformation("Varianti applicate: {Count} regole", ruleset.Count);
+%     }
+%     
+%     // FASE 3: Notifica client 3D (se receiverId fornito)
+%     bool notified = false;
+%     if (!string.IsNullOrEmpty(receiverId))
+%     {
+%         var message = new Message {
+%             Action = "open",
+%             Name = projectId,
+%             Route = $"/direct/{receiverId}",
+%             Params = new { projectId, rowId }
+%         };
+%         
+%         notified = await _signalRService.CallHubMethodAsync(
+%             "SendMessage", receiverId, message);
+%             
+%         _logger.LogInformation("Client 3D notificato: {Notified}", notified);
+%     }
+%     
+%     // Risposta completa
+%     return JsonSerializer.Serialize(new {
+%         success = true,
+%         rowId,
+%         article = new { cod, des },
+%         variantsApplied,
+%         variantsCount = ruleset?.Count ?? 0,
+%         notified
+%     });
+% }
+% ```
+%
+% GESTIONE ERRORI:
+% - Try-catch per eccezioni HTTP
+% - Validazione response status codes
+% - Logging strutturato per debugging
+% - Partial success: articolo inserito anche se varianti falliscono
+%
+% PATTERN IMPLEMENTATIVI:
+% - GET-MODIFY-SAVE: lettura → modifica → scrittura
+% - Fluent chaining: operazioni sequenziali async
+% - Dictionary manipulation: modifica campo pars
+% - Conditional execution: varianti e notifica opzionali
+%
+% Concetti chiave:
+% - Complex workflows: orchestrazione multiple API calls
+% - Error resilience: partial success handling
+% - Structured logging: tracciamento operazioni
+% - Async coordination: await multiple operations
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Implementazione SignalR Service}
+\label{sec:implementazione-signalr-service}
+%----------------------------------------------------------------------------------------
+
+%----------------------------------------------------------------------------------------
+\subsection{Classe SignalRService e Connection Management}
+\label{subsec:signalr-service-class}
+%----------------------------------------------------------------------------------------
+
+% STRUTTURA CLASSE:
+%
+% ```csharp
+% public class SignalRService : IAsyncDisposable
+% {
+%     private HubConnection? _hubConnection;
+%     private readonly ILogger<SignalRService> _logger;
+%     private readonly IConfiguration _config;
+%     private string _configuredUrl;
+%     private bool _isConnected;
+%     private readonly List<Action<string, object>> _receiveHandlers = new();
+%     private readonly object _lastListLock = new();
+%     private string? _lastListElementsPayload;
+%     
+%     public SignalRService(ILogger<SignalRService> logger, IConfiguration config)
+%     {
+%         _logger = logger;
+%         _config = config;
+%         _configuredUrl = _config["SignalR:HubUrl"] ?? "https://localhost:7193";
+%     }
+%     
+%     public bool IsConnected => _isConnected && 
+%                                _hubConnection?.State == HubConnectionState.Connected;
+%     
+%     public string? ConnectionId => _hubConnection?.ConnectionId;
+% }
+% ```
+%
+% METODO ConnectAsync CON RETRY LOGIC:
+%
+% ```csharp
+% public async Task<bool> ConnectAsync()
+% {
+%     if (IsConnected) return true;
+%     
+%     var urls = new[] {
+%         _configuredUrl,
+%         $"{_configuredUrl}/hub",
+%         $"{_configuredUrl}/configuratorHub"
+%     };
+%     
+%     foreach (var url in urls)
+%     {
+%         try
+%         {
+%             _logger.LogInformation("Tentativo connessione a {Url}", url);
+%             
+%             if (await TryBuildAndStartConnectionAsync(url))
+%             {
+%                 _isConnected = true;
+%                 _logger.LogInformation("Connesso con successo, ConnectionId={Id}", ConnectionId);
+%                 return true;
+%             }
+%         }
+%         catch (Exception ex)
+%         {
+%             _logger.LogWarning(ex, "Fallito tentativo connessione a {Url}", url);
+%         }
+%     }
+%     
+%     _logger.LogError("Tutti i tentativi di connessione falliti");
+%     return false;
+% }
+%
+% private async Task<bool> TryBuildAndStartConnectionAsync(string url)
+% {
+%     var allowInsecure = _config.GetValue<bool>("SignalR:AllowInsecureCertificates");
+%     
+%     var builder = new HubConnectionBuilder()
+%         .WithUrl(url, options => {
+%             if (allowInsecure)
+%             {
+%                 options.HttpMessageHandlerFactory = handler => {
+%                     if (handler is HttpClientHandler clientHandler)
+%                     {
+%                         clientHandler.ServerCertificateCustomValidationCallback = 
+%                             (message, cert, chain, errors) => true;
+%                     }
+%                     return handler;
+%                 };
+%             }
+%         })
+%         .WithAutomaticReconnect(new[] {
+%             TimeSpan.Zero,      // Tentativo immediato
+%             TimeSpan.FromSeconds(2),
+%             TimeSpan.FromSeconds(5),
+%             TimeSpan.FromSeconds(10)
+%         })
+%         .ConfigureLogging(logging => {
+%             logging.SetMinimumLevel(LogLevel.Debug);
+%         })
+%         .Build();
+%     
+%     // Registra event handlers
+%     builder.Closed += async (error) => {
+%         _isConnected = false;
+%         _logger.LogWarning("Connessione SignalR chiusa: {Error}", error?.Message);
+%         await Task.CompletedTask;
+%     };
+%     
+%     builder.Reconnecting += (error) => {
+%         _logger.LogInformation("Tentativo riconnessione SignalR");
+%         return Task.CompletedTask;
+%     };
+%     
+%     builder.Reconnected += (connectionId) => {
+%         _isConnected = true;
+%         _logger.LogInformation("Riconnessione riuscita, nuovo ConnectionId={Id}", connectionId);
+%         return Task.CompletedTask;
+%     };
+%     
+%     // Registra message handlers
+%     RegisterReceiveHandlers(builder);
+%     
+%     await builder.StartAsync();
+%     _hubConnection = builder;
+%     return true;
+% }
+% ```
+%
+% GESTIONE RICONNESSIONE:
+% - WithAutomaticReconnect: backoff esponenziale (0s, 2s, 5s, 10s)
+% - Event handlers: Closed, Reconnecting, Reconnected
+% - State tracking: _isConnected flag aggiornato
+% - Logging: tracciamento tutti gli eventi lifecycle
+%
+% MULTIPLE ENDPOINT FALLBACK:
+% - Prova URL base configurato
+% - Prova URL + /hub (convenzione SignalR)
+% - Prova URL + /configuratorHub (endpoint custom)
+% - Loop su array con try-catch per resilienza
+%
+% CERTIFICATI SSL SVILUPPO:
+% - ServerCertificateCustomValidationCallback per self-signed
+% - Configurabile via appsettings (AllowInsecureCertificates)
+% - Solo per ambiente sviluppo, disabilitato in produzione
+%
+% Concetti chiave:
+% - Builder pattern: configurazione fluent HubConnection
+% - Retry logic: tentativi multipli con backoff
+% - Event-driven: handlers per lifecycle events
+% - Configuration-driven: URL e certificati da appsettings
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\subsection{Invio e Ricezione Messaggi}
+\label{subsec:invio-ricezione-messaggi}
+%----------------------------------------------------------------------------------------
+
+% INVIO MESSAGGI AL SERVER:
+%
+% ```csharp
+% public async Task<bool> CallHubMethodAsync(string methodName, params object[] args)
+% {
+%     if (!IsConnected)
+%     {
+%         _logger.LogWarning("Tentativo invio messaggio senza connessione attiva");
+%         return false;
+%     }
+%     
+%     try
+%     {
+%         await _hubConnection!.InvokeCoreAsync(methodName, args);
+%         _logger.LogDebug("Invocato metodo {Method} con {ArgCount} argomenti", 
+%             methodName, args.Length);
+%         return true;
+%     }
+%     catch (Exception ex)
+%     {
+%         _logger.LogError(ex, "Errore invocazione metodo {Method}", methodName);
+%         return false;
+%     }
+% }
+%
+% public async Task<bool> SendCommandAsync(string receiverId, Message message)
+% {
+%     return await CallHubMethodAsync("SendMessage", receiverId, message);
+% }
+% ```
+%
+% RICEZIONE MESSAGGI DAL SERVER:
+%
+% ```csharp
+% private void RegisterReceiveHandlers(HubConnection connection)
+% {
+%     // Handler per messaggi diretti
+%     connection.On<string, object>("ReceiveMessage", (senderId, message) => {
+%         _logger.LogInformation("Ricevuto messaggio da {Sender}", senderId);
+%         
+%         // Invoca tutti gli handler registrati
+%         foreach (var handler in _receiveHandlers)
+%         {
+%             try
+%             {
+%                 handler(senderId, message);
+%             }
+%             catch (Exception ex)
+%             {
+%                 _logger.LogError(ex, "Errore in message handler");
+%             }
+%         }
+%     });
+%     
+%     // Handler per messaggi generici
+%     connection.On<object>("GetMessage", (message) => {
+%         _logger.LogInformation("Ricevuto GetMessage: {Message}", message);
+%     });
+%     
+%     _logger.LogDebug("Handler messaggi registrati");
+% }
+%
+% public void OnReceiveMessage(Action<string, object> handler)
+% {
+%     _receiveHandlers.Add(handler);
+%     _logger.LogDebug("Registrato nuovo handler, totale={Count}", _receiveHandlers.Count);
+% }
+% ```
+%
+% HANDLER SPECIFICO PER LIST_ELEMENTS:
+%
+% ```csharp
+% private void EnsureListElementsHandlerRegistered()
+% {
+%     if (_receiveHandlers.Any(h => h.Method.Name.Contains("ListElements")))
+%         return;
+%     
+%     OnReceiveMessage((senderId, message) => {
+%         try
+%         {
+%             var messageObj = JsonSerializer.Deserialize<Message>(
+%                 message.ToString() ?? "{}");
+%             
+%             if (messageObj?.Action == "list_elements")
+%             {
+%                 lock (_lastListLock)
+%                 {
+%                     _lastListElementsPayload = JsonSerializer.Serialize(messageObj.Params);
+%                 }
+%                 _logger.LogInformation("Salvato payload list_elements");
+%             }
+%         }
+%         catch (Exception ex)
+%         {
+%             _logger.LogError(ex, "Errore parsing message list_elements");
+%         }
+%     });
+% }
+%
+% public string? GetLastListElements()
+% {
+%     lock (_lastListLock)
+%     {
+%         return _lastListElementsPayload;
+%     }
+% }
+% ```
+%
+% PATTERN OBSERVER:
+% - List di Action<string, object> per handler multipli
+% - OnReceiveMessage registra callback
+% - RegisterReceiveHandlers invoca tutti i callback
+% - Thread-safe con try-catch per ogni handler
+%
+% GESTIONE STATE:
+% - _lastListElementsPayload: cache ultimo payload ricevuto
+% - Lock per thread-safety (_lastListLock)
+% - Getter pubblico per recupero asincrono
+%
+% SERIALIZZAZIONE/DESERIALIZZAZIONE:
+% - SignalR serializza automaticamente Message in JSON
+% - Deserializzazione manuale per processing specifico
+% - System.Text.Json per performance
+%
+% Concetti chiave:
+% - Observer Pattern: multiple handlers per eventi
+% - Thread-safety: lock per accesso concorrente
+% - Type-safe invocation: InvokeCoreAsync con params
+% - Error isolation: try-catch per ogni handler
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Implementazione IwineHub (SignalR Server)}
+\label{sec:implementazione-iwine-hub}
+%----------------------------------------------------------------------------------------
+
+% CLASSE HUB PRINCIPALE:
+%
+% ```csharp
+% public class IwineHub : Hub<IClient>
+% {
+%     private readonly ILogger<IwineHub> _logger;
+%     
+%     public IwineHub(ILogger<IwineHub> logger)
+%     {
+%         _logger = logger;
+%     }
+%     
+%     public override async Task OnConnectedAsync()
+%     {
+%         var connectionId = Context.ConnectionId;
+%         _logger.LogInformation("Client connesso: {ConnectionId}", connectionId);
+%         
+%         // Invia ConnectionId al client
+%         await Clients.Caller.GetConnectionId(connectionId);
+%         
+%         await base.OnConnectedAsync();
+%     }
+%     
+%     public override async Task OnDisconnectedAsync(Exception? exception)
+%     {
+%         var connectionId = Context.ConnectionId;
+%         _logger.LogInformation("Client disconnesso: {ConnectionId}, Reason: {Reason}", 
+%             connectionId, exception?.Message);
+%         
+%         await base.OnDisconnectedAsync(exception);
+%     }
+%     
+%     public async Task SendMessage(Message message)
+%     {
+%         var senderId = Context.ConnectionId;
+%         _logger.LogInformation("SendMessage da {Sender}, Action={Action}, Route={Route}", 
+%             senderId, message.Action, message.Route);
+%         
+%         try
+%         {
+%             // Validazione messaggio
+%             if (string.IsNullOrEmpty(message.Action))
+%             {
+%                 throw new HubException("Action è obbligatoria");
+%             }
+%             
+%             // Routing basato su Route
+%             if (message.Route?.StartsWith("/broadcast") == true)
+%             {
+%                 // Broadcasting a tutti
+%                 await Clients.All.GetMessage(message);
+%                 _logger.LogDebug("Messaggio broadcast a tutti i client");
+%             }
+%             else if (message.Params is JsonElement paramsElement && 
+%                      paramsElement.TryGetProperty("receiverId", out var receiverIdProp))
+%             {
+%                 // Point-to-point a client specifico
+%                 var receiverId = receiverIdProp.GetString();
+%                 await Clients.Client(receiverId!).GetMessage(message);
+%                 _logger.LogDebug("Messaggio inviato a {Receiver}", receiverId);
+%             }
+%             else
+%             {
+%                 // Default: broadcast
+%                 await Clients.All.GetMessage(message);
+%             }
+%         }
+%         catch (Exception ex)
+%         {
+%             _logger.LogError(ex, "Errore processing messaggio");
+%             throw new HubException($"Errore processing messaggio: {ex.Message}");
+%         }
+%     }
+%     
+%     public async Task SendConnectionId(string receiverId, string senderId)
+%     {
+%         _logger.LogInformation("SendConnectionId: {Sender} → {Receiver}", 
+%             senderId, receiverId);
+%         
+%         try
+%         {
+%             await Clients.Client(receiverId).GetConnectionId(senderId);
+%         }
+%         catch (Exception ex)
+%         {
+%             _logger.LogError(ex, "Errore invio ConnectionId");
+%             throw new HubException($"Client {receiverId} non trovato");
+%         }
+%     }
+% }
+% ```
+%
+% INTERFACCIA STRONGLY-TYPED:
+%
+% ```csharp
+% public interface IClient
+% {
+%     Task GetMessage(Message message);
+%     Task GetConnectionId(string connectionId);
+% }
+% ```
+%
+% CONFIGURAZIONE ASP.NET CORE:
+%
+% ```csharp
+% // Program.cs del SignalR Server
+% var builder = WebApplication.CreateBuilder(args);
+%
+% // Aggiungi SignalR
+% builder.Services.AddSignalR(options => {
+%     options.EnableDetailedErrors = true;
+%     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+%     options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+% });
+%
+% // Aggiungi CORS
+% builder.Services.AddCors(options => {
+%     options.AddPolicy("AllowAll", policy => {
+%         policy.AllowAnyOrigin()
+%               .AllowAnyMethod()
+%               .AllowAnyHeader();
+%     });
+% });
+%
+% var app = builder.Build();
+%
+% app.UseCors("AllowAll");
+% app.UseRouting();
+%
+% // Mappa Hub SignalR
+% app.MapHub<IwineHub>("/configuratorHub");
+%
+% app.Run();
+% ```
+%
+% ROUTING MESSAGGI:
+% - Pattern matching su message.Route
+% - Clients.All per broadcasting
+% - Clients.Client(id) per point-to-point
+% - Clients.Caller per risposta a mittente
+% - Clients.Group(name) per gruppi (se implementato)
+%
+% VALIDAZIONE:
+% - Controllo message.Action non vuoto
+% - Try-catch per errori processing
+% - HubException per errori client-friendly
+% - Logging strutturato per debugging
+%
+% STRONGLY-TYPED HUB:
+% - Hub<IClient> per type-safety
+% - Compilazione verifica metodi IClient
+% - IntelliSense per metodi client
+% - Refactoring safe
+%
+% Concetti chiave:
+% - Hub as controller: routing e orchestrazione
+% - Strongly-typed clients: type-safety end-to-end
+% - Lifecycle hooks: OnConnected/OnDisconnected
+% - CORS configuration: cross-origin support
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Implementazione Client Configurator3D}
+\label{sec:implementazione-client-3d}
+%----------------------------------------------------------------------------------------
+
+% CLIENT TYPESCRIPT SIGNALR:
+%
+% ```typescript
+% import * as signalR from "@microsoft/signalr";
+%
+% export class SignalRClient {
+%     private connection: signalR.HubConnection;
+%     private messageHandlers: Map<string, (message: Message) => void>;
+%     
+%     constructor(hubUrl: string) {
+%         this.messageHandlers = new Map();
+%         
+%         this.connection = new signalR.HubConnectionBuilder()
+%             .withUrl(hubUrl)
+%             .withAutomaticReconnect([0, 2000, 5000, 10000])
+%             .configureLogging(signalR.LogLevel.Information)
+%             .build();
+%         
+%         this.setupEventHandlers();
+%     }
+%     
+%     private setupEventHandlers(): void {
+%         // Handler ricezione messaggi
+%         this.connection.on("GetMessage", (message: Message) => {
+%             console.log("Ricevuto messaggio:", message);
+%             this.handleMessage(message);
+%         });
+%         
+%         // Handler ricezione ConnectionId
+%         this.connection.on("GetConnectionId", (connectionId: string) => {
+%             console.log("Ricevuto ConnectionId:", connectionId);
+%             localStorage.setItem("signalr-connection-id", connectionId);
+%         });
+%         
+%         // Lifecycle events
+%         this.connection.onclose((error) => {
+%             console.warn("Connessione chiusa:", error);
+%         });
+%         
+%         this.connection.onreconnecting((error) => {
+%             console.info("Tentativo riconnessione...");
+%         });
+%         
+%         this.connection.onreconnected((connectionId) => {
+%             console.info("Riconnesso, nuovo ID:", connectionId);
+%         });
+%     }
+%     
+%     async start(): Promise<void> {
+%         try {
+%             await this.connection.start();
+%             console.log("SignalR connesso, ID:", this.connection.connectionId);
+%         } catch (error) {
+%             console.error("Errore connessione SignalR:", error);
+%             setTimeout(() => this.start(), 5000); // Retry dopo 5s
+%         }
+%     }
+%     
+%     registerHandler(action: string, handler: (message: Message) => void): void {
+%         this.messageHandlers.set(action, handler);
+%     }
+%     
+%     private handleMessage(message: Message): void {
+%         const handler = this.messageHandlers.get(message.Action);
+%         if (handler) {
+%             handler(message);
+%         } else {
+%             console.warn("Nessun handler per action:", message.Action);
+%         }
+%     }
+%     
+%     async sendMessage(message: Message): Promise<void> {
+%         await this.connection.invoke("SendMessage", message);
+%     }
+% }
+% ```
+%
+% MESSAGE HANDLER SPECIFICI:
+%
+% ```typescript
+% export class MessageHandler {
+%     private signalRClient: SignalRClient;
+%     private configurator: Configurator3D;
+%     
+%     constructor(signalRClient: SignalRClient, configurator: Configurator3D) {
+%         this.signalRClient = signalRClient;
+%         this.configurator = configurator;
+%         
+%         this.registerHandlers();
+%     }
+%     
+%     private registerHandlers(): void {
+%         // Handler per "open"
+%         this.signalRClient.registerHandler("open", async (message) => {
+%             const projectId = message.Name;
+%             console.log("Comando OPEN progetto:", projectId);
+%             
+%             // Carica progetto nel configurator 3D
+%             const projectData = await this.fetchProjectData(projectId);
+%             await this.configurator.loadProject(projectData);
+%             
+%             // Invia conferma
+%             await this.sendAck(message, { loaded: true });
+%         });
+%         
+%         // Handler per "create"
+%         this.signalRClient.registerHandler("create", async (message) => {
+%             const params = message.Params as CreateProjectParams;
+%             console.log("Comando CREATE progetto:", params);
+%             
+%             // Mostra dialog creazione con dati pre-compilati
+%             this.configurator.showCreateDialog({
+%                 description: params.des,
+%                 notes: params.note,
+%                 autoOpen: params.open
+%             });
+%         });
+%         
+%         // Handler per "list_elements"
+%         this.signalRClient.registerHandler("list_elements", async (message) => {
+%             const params = message.Params as ListElementsParams;
+%             console.log("Richiesta LIST_ELEMENTS:", params);
+%             
+%             // Cerca nel catalogo locale
+%             const results = await this.configurator.searchCatalog(
+%                 params.catalogo,
+%                 params.cerca
+%             );
+%             
+%             // Invia risultati al server
+%             await this.signalRClient.sendMessage({
+%                 Action: "list_elements",
+%                 Name: "response",
+%                 Route: "/response",
+%                 Params: results
+%             });
+%         });
+%     }
+%     
+%     private async fetchProjectData(projectId: string): Promise<ProjectData> {
+%         const response = await fetch(`/api/projects/${projectId}`);
+%         return await response.json();
+%     }
+%     
+%     private async sendAck(originalMessage: Message, data: any): Promise<void> {
+%         await this.signalRClient.sendMessage({
+%             Action: "ack",
+%             Name: originalMessage.Action,
+%             Route: "/ack",
+%             Params: data
+%         });
+%     }
+% }
+% ```
+%
+% INTEGRAZIONE CON CONFIGURATOR 3D:
+% - SignalRClient: gestione connessione e messaggi
+% - MessageHandler: dispatch messaggi ad azioni specifiche
+% - Configurator3D: interfaccia per operazioni 3D (loadProject, showCreateDialog, searchCatalog)
+% - Comunicazione bidirezionale: client può rispondere con sendMessage
+%
+% PATTERN IMPLEMENTATIVI:
+% - Map<string, handler>: dispatch dinamico per action
+% - Async/await: operazioni asincrone (fetch, invoke)
+% - Lifecycle management: setup in constructor, cleanup in destroy
+% - Error handling: try-catch con logging
+%
+% Concetti chiave:
+% - TypeScript: type-safety lato client
+% - SignalR JS SDK: client WebSocket JavaScript
+% - Handler registration: pattern observer client-side
+% - Bidirectional communication: client può inviare/ricevere
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Gestione Configurazione e Sicurezza}
+\label{sec:configurazione-sicurezza}
+%----------------------------------------------------------------------------------------
+
+% GESTIONE APPSETTINGS PER AMBIENTE:
+%
+% appsettings.json (base):
+% ```json
+% {
+%   "MarkunoApi": {
+%     "BaseUrl": "https://api.markuno.com"
+%   },
+%   "SignalR": {
+%     "HubUrl": "https://signalr.markuno.com",
+%     "AllowInsecureCertificates": false
+%   },
+%   "Logging": {
+%     "LogLevel": {
+%       "Default": "Information"
+%     }
+%   }
+% }
+% ```
+%
+% appsettings.Development.json:
+% ```json
+% {
+%   "MarkunoApi": {
+%     "BaseUrl": "https://localhost:5001",
+%     "DefaultUser": "dev-user",
+%     "DefaultPassword": "dev-password"
+%   },
+%   "SignalR": {
+%     "HubUrl": "https://localhost:7193",
+%     "AllowInsecureCertificates": true
+%   },
+%   "Logging": {
+%     "LogLevel": {
+%       "Default": "Debug",
+%       "Microsoft.AspNetCore.SignalR": "Trace"
+%     }
+%   }
+% }
+% ```
+%
+% SECRETS MANAGEMENT:
+% - User Secrets per sviluppo locale
+% - dotnet user-secrets init
+% - dotnet user-secrets set "MarkunoApi:DefaultPassword" "secret"
+% - Non committare credenziali in Git
+% - Azure Key Vault per produzione
+%
+% CONFIGURAZIONE SSL/TLS:
+%
+% ```csharp
+% // Sviluppo: Trust certificati self-signed
+% if (builder.Environment.IsDevelopment())
+% {
+%     builder.Services.AddHttpClient()
+%         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler {
+%             ServerCertificateCustomValidationCallback = 
+%                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+%         });
+% }
+% ```
+%
+% AUTENTICAZIONE JWT:
+%
+% ```csharp
+% // IwineHub authentication
+% builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+%     .AddJwtBearer(options => {
+%         options.Authority = "https://identity-server.com";
+%         options.Audience = "iwine-hub";
+%         
+%         // Per SignalR
+%         options.Events = new JwtBearerEvents {
+%             OnMessageReceived = context => {
+%                 var accessToken = context.Request.Query["access_token"];
+%                 var path = context.HttpContext.Request.Path;
+%                 
+%                 if (!string.IsNullOrEmpty(accessToken) && 
+%                     path.StartsWithSegments("/configuratorHub"))
+%                 {
+%                     context.Token = accessToken;
+%                 }
+%                 return Task.CompletedTask;
+%             }
+%         };
+%     });
+% ```
+%
+% CORS CONFIGURATION:
+%
+% ```csharp
+% builder.Services.AddCors(options => {
+%     options.AddPolicy("Production", policy => {
+%         policy.WithOrigins(
+%             "https://configurator.markuno.com",
+%             "https://app.markuno.com"
+%         )
+%         .AllowAnyMethod()
+%         .AllowAnyHeader()
+%         .AllowCredentials(); // Per SignalR cookies
+%     });
+%     
+%     options.AddPolicy("Development", policy => {
+%         policy.AllowAnyOrigin()
+%               .AllowAnyMethod()
+%               .AllowAnyHeader();
+%     });
+% });
+%
+% var corsPolicy = builder.Environment.IsDevelopment() 
+%     ? "Development" 
+%     : "Production";
+% app.UseCors(corsPolicy);
+% ```
+%
+% BEST PRACTICES SICUREZZA:
+% - Credenziali mai hardcoded
+% - HTTPS/WSS obbligatorio in produzione
+% - JWT con expiration breve (15-30 min)
+% - Refresh token per sessioni lunghe
+% - CORS policy restrittive in produzione
+% - Input validation per tutti i parametri
+% - Rate limiting per prevenire abuse
+%
+% Concetti chiave:
+% - Configuration hierarchy: base → environment → secrets
+% - Environment-specific settings: Development vs Production
+% - JWT Bearer authentication: standard OAuth 2.0
+% - CORS policies: security cross-origin
+% - SSL/TLS: encryption in transit
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Testing e Debugging}
+\label{sec:testing-debugging}
+%----------------------------------------------------------------------------------------
+
+% UNIT TESTING:
+%
+% ```csharp
+% [TestClass]
+% public class MarkunoApiToolsTests
+% {
+%     private Mock<HttpClient> _httpClientMock;
+%     private Mock<SignalRService> _signalRServiceMock;
+%     private Mock<ILogger<MarkunoApiTools>> _loggerMock;
+%     private Mock<IConfiguration> _configMock;
+%     private MarkunoApiTools _tools;
+%     
+%     [TestInitialize]
+%     public void Setup()
+%     {
+%         _httpClientMock = new Mock<HttpClient>();
+%         _signalRServiceMock = new Mock<SignalRService>();
+%         _loggerMock = new Mock<ILogger<MarkunoApiTools>>();
+%         _configMock = new Mock<IConfiguration>();
+%         
+%         _tools = new MarkunoApiTools(
+%             _httpClientMock.Object,
+%             _signalRServiceMock.Object,
+%             _loggerMock.Object,
+%             _configMock.Object
+%         );
+%     }
+%     
+%     [TestMethod]
+%     public async Task Login_WithValidCredentials_ReturnsSuccess()
+%     {
+%         // Arrange
+%         var loginResponse = new LoginResponse {
+%             Data = new LoginData {
+%                 User = new User { 
+%                     Token = "test-token",
+%                     Name = "testuser"
+%                 }
+%             }
+%         };
+%         
+%         _httpClientMock.Setup(x => x.PostAsJsonAsync(
+%             It.IsAny<string>(), 
+%             It.IsAny<object>()
+%         )).ReturnsAsync(new HttpResponseMessage {
+%             StatusCode = HttpStatusCode.OK,
+%             Content = new StringContent(JsonSerializer.Serialize(loginResponse))
+%         });
+%         
+%         // Act
+%         var result = await _tools.Login("testuser", "password");
+%         var resultObj = JsonSerializer.Deserialize<dynamic>(result);
+%         
+%         // Assert
+%         Assert.IsTrue(resultObj.success);
+%         Assert.AreEqual("testuser", resultObj.username);
+%     }
+% }
+% ```
+%
+% INTEGRATION TESTING:
+%
+% ```csharp
+% [TestClass]
+% public class SignalRIntegrationTests
+% {
+%     private WebApplicationFactory<Program> _factory;
+%     private HubConnection _clientConnection;
+%     
+%     [TestInitialize]
+%     public async Task Setup()
+%     {
+%         _factory = new WebApplicationFactory<Program>();
+%         var client = _factory.CreateClient();
+%         
+%         _clientConnection = new HubConnectionBuilder()
+%             .WithUrl($"{client.BaseAddress}configuratorHub", options => {
+%                 options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
+%             })
+%             .Build();
+%         
+%         await _clientConnection.StartAsync();
+%     }
+%     
+%     [TestMethod]
+%     public async Task SendMessage_Broadcast_AllClientsReceive()
+%     {
+%         // Arrange
+%         var receivedMessages = new List<Message>();
+%         _clientConnection.On<Message>("GetMessage", msg => {
+%             receivedMessages.Add(msg);
+%         });
+%         
+%         var testMessage = new Message {
+%             Action = "test",
+%             Route = "/broadcast"
+%         };
+%         
+%         // Act
+%         await _clientConnection.InvokeAsync("SendMessage", testMessage);
+%         await Task.Delay(100); // Attendi delivery
+%         
+%         // Assert
+%         Assert.AreEqual(1, receivedMessages.Count);
+%         Assert.AreEqual("test", receivedMessages[0].Action);
+%     }
+% }
+% ```
+%
+% DEBUGGING SIGNALR:
+%
+% Configurazione logging dettagliato:
+% ```json
+% {
+%   "Logging": {
+%     "LogLevel": {
+%       "Microsoft.AspNetCore.SignalR": "Trace",
+%       "Microsoft.AspNetCore.Http.Connections": "Trace"
+%     }
+%   }
+% }
+% ```
+%
+% Strumenti debugging:
+% - Browser DevTools: Network tab per WebSocket frames
+% - Fiddler/Postman: intercettazione traffico HTTP/WS
+% - SignalR Tracing: log dettagliati protocol
+% - VS Code Debugger: breakpoint in hub methods
+%
+% LOGGING STRUTTURATO:
+%
+% ```csharp
+% _logger.LogInformation(
+%     "Tool {ToolName} invocato da {User} con {ParamCount} parametri",
+%     "AddArticle",
+%     _currentUser?.Name,
+%     parameters.Count
+% );
+%
+% _logger.LogError(
+%     exception,
+%     "Errore processing messaggio {MessageId} da {Sender}",
+%     message.Id,
+%     senderId
+% );
+% ```
+%
+% PERFORMANCE MONITORING:
+% - Application Insights per telemetria
+% - Custom metrics per tool invocation times
+% - SignalR metrics: connection count, message rate
+% - Health checks endpoint: /health
+%
+% Concetti chiave:
+% - Unit testing: mocking dependencies
+% - Integration testing: WebApplicationFactory
+% - Structured logging: semantic log messages
+% - Debugging tools: DevTools, Fiddler, tracing
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Deployment e Produzione}
+\label{sec:deployment-produzione}
+%----------------------------------------------------------------------------------------
+
+% CONTAINERIZATION CON DOCKER:
+%
+% Dockerfile per MCP Server:
+% ```dockerfile
+% FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+% WORKDIR /app
+% EXPOSE 80
+% EXPOSE 443
+%
+% FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+% WORKDIR /src
+% COPY ["MarkunoApiTools/MarkunoApiTools.csproj", "MarkunoApiTools/"]
+% RUN dotnet restore "MarkunoApiTools/MarkunoApiTools.csproj"
+% COPY . .
+% WORKDIR "/src/MarkunoApiTools"
+% RUN dotnet build "MarkunoApiTools.csproj" -c Release -o /app/build
+%
+% FROM build AS publish
+% RUN dotnet publish "MarkunoApiTools.csproj" -c Release -o /app/publish
+%
+% FROM base AS final
+% WORKDIR /app
+% COPY --from=publish /app/publish .
+% ENTRYPOINT ["dotnet", "MarkunoApiTools.dll"]
+% ```
+%
+% docker-compose.yml:
+% ```yaml
+% version: '3.8'
+% services:
+%   signalr-server:
+%     build:
+%       context: ./IwineSignalRServer
+%       dockerfile: Dockerfile
+%     ports:
+%       - "7193:80"
+%     environment:
+%       - ASPNETCORE_ENVIRONMENT=Production
+%       - ASPNETCORE_URLS=http://+:80
+%     networks:
+%       - markuno-network
+%   
+%   mcp-server:
+%     build:
+%       context: ./MarkunoApiTools
+%       dockerfile: Dockerfile
+%     depends_on:
+%       - signalr-server
+%     environment:
+%       - SignalR__HubUrl=http://signalr-server:80
+%     networks:
+%       - markuno-network
+%
+% networks:
+%   markuno-network:
+%     driver: bridge
+% ```
+%
+% DEPLOYMENT SU AZURE:
+%
+% Azure App Service per SignalR Server:
+% - Scala automaticamente con load balancer
+% - Azure SignalR Service per scalabilità orizzontale
+% - Sticky sessions per mantenere connessioni
+%
+% Azure Container Instances per MCP Server:
+% - Lightweight, pay-per-second
+% - Networking virtuale per comunicazione privata
+% - Managed identity per secrets
+%
+% CI/CD PIPELINE (GitHub Actions):
+%
+% ```yaml
+% name: Deploy to Production
+%
+% on:
+%   push:
+%     branches: [ main ]
+%
+% jobs:
+%   build-and-deploy:
+%     runs-on: ubuntu-latest
+%     steps:
+%       - uses: actions/checkout@v2
+%       
+%       - name: Setup .NET
+%         uses: actions/setup-dotnet@v1
+%         with:
+%           dotnet-version: '8.0.x'
+%       
+%       - name: Restore dependencies
+%         run: dotnet restore
+%       
+%       - name: Build
+%         run: dotnet build --configuration Release
+%       
+%       - name: Test
+%         run: dotnet test --no-build --verbosity normal
+%       
+%       - name: Publish
+%         run: dotnet publish -c Release -o ./publish
+%       
+%       - name: Deploy to Azure App Service
+%         uses: azure/webapps-deploy@v2
+%         with:
+%           app-name: 'markuno-signalr'
+%           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+%           package: ./publish
+% ```
+%
+% MONITORAGGIO PRODUZIONE:
+% - Application Insights: telemetria applicativa
+% - Azure Monitor: metriche infrastruttura
+% - Log Analytics: query centralizzate su log
+% - Alert rules: notifiche errori/performance
+%
+% SCALABILITÀ:
+% - Azure SignalR Service: backplane per scale-out
+% - Redis backplane alternativa
+% - Load balancer con sticky sessions
+% - Horizontal scaling: multiple istanze
+%
+% HIGH AVAILABILITY:
+% - Multiple regions deployment
+% - Health check endpoints
+% - Auto-restart on failure
+% - Backup SignalR server fallback
+%
+% Concetti chiave:
+% - Containerization: Docker per portabilità
+% - Orchestration: docker-compose per multi-container
+% - CI/CD: automazione deployment
+% - Cloud services: Azure PaaS per scalabilità
+% - Monitoring: telemetria e alerting
+%
+% Pagine stimate: 3-4
+
+%----------------------------------------------------------------------------------------
+\section{Sintesi dell'Implementazione}
+\label{sec:sintesi-implementazione}
+%----------------------------------------------------------------------------------------
+
+% Riepilogo finale del capitolo:
+%
+% COMPONENTI IMPLEMENTATI:
+% - MCP Server (MarkunoApiTools): 15+ tool implementati
+% - SignalR Service: client connection con retry logic
+% - IwineHub: server SignalR con routing messaggi
+% - Configurator3D Client: integrazione TypeScript
+% - Configuration system: appsettings multi-environment
+% - Authentication: JWT bearer token management
+% - Logging: strutturato con ILogger
+% - Testing: unit + integration tests
+%
+% TECNOLOGIE UTILIZZATE:
+% - .NET 8.0 / C# 12
+% - ASP.NET Core SignalR
+% - TypeScript 5.x
+% - System.Text.Json
+% - xUnit / MSTest
+% - Docker / Azure
+%
+% LINEE DI CODICE:
+% - MCP Server: ~2000 LOC
+% - SignalR Service: ~500 LOC
+% - IwineHub: ~300 LOC
+% - Client TypeScript: ~800 LOC
+% - Tests: ~1000 LOC
+% - Totale: ~4600 LOC
+%
+% PATTERN IMPLEMENTATIVI:
+% - Dependency Injection
+% - Repository Pattern
+% - Observer Pattern
+% - Command Pattern
+% - Singleton Pattern
+% - Builder Pattern
+% - Async/Await everywhere
+%
+% SFIDE TECNICHE RISOLTE:
+% - Riconnessione automatica SignalR con backoff
+% - Multiple endpoint fallback per resilienza
+% - Thread-safe state management per payload caching
+% - JWT token refresh automatico
+% - Certificati self-signed in sviluppo
+% - CORS configuration per cross-origin
+% - Serializzazione/deserializzazione JSON complessa
+%
+% METRICHE PRESTAZIONI:
+% - Latenza media tool invocation: <100ms
+% - Latenza SignalR round-trip: <50ms
+% - Throughput messaggi: ~1000 msg/sec
+% - Concurrent connections supportate: 500+
+%
+% Pagine totali stimate: 35-45 pagine
 
 %----------------------------------------------------------------------------------------
 % BIBLIOGRAPHY

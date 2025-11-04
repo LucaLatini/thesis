@@ -1,0 +1,52 @@
+---
+title: "Diagramma 7 - Comunicazione SignalR e Messaggi"
+---
+
+classDiagram
+    %% Focus su comunicazione e messaggi SignalR
+    
+    class MarkunoApiTools {
+        <<Tool>>
+        +SendHubMessage(receiverId, action, name) Task~string~
+        +ListElements(receiverId, catalogo, cerca) Task~string~
+        +GetLastListElements() string
+        -EnsureListElementsHandlerRegistered()
+    }
+    
+    class SignalRService {
+        <<Service>>
+        +CallHubMethodAsync(method, args) Task~bool~
+        +OnReceiveMessage(handler) void
+        +SendPayloadAsync(method, payload) Task~bool~
+    }
+    
+    class Message {
+        <<Model>>
+        +Action: string
+        +Name: string
+        +Route: string
+        +Params: object
+    }
+    
+    class SignalRHub {
+        <<External>>
+        SendMessage(receiverId, message)
+        ReceiveMessage(senderId, message)
+    }
+    
+    class Configurator3D {
+        <<External>>
+        Azioni supportate
+    }
+    
+    MarkunoApiTools --> SignalRService : invia messaggi
+    MarkunoApiTools ..> Message : costruisce
+    SignalRService ..> Message : invia/riceve
+    SignalRService --> SignalRHub : WebSocket
+    SignalRHub <--> Configurator3D : bidirezionale
+    
+    note for Message "Struttura messaggio:\n- Action: operazione richiesta\n  (open, create, list_elements)\n- Name: parametro azione\n  (es. projectId)\n- Params: dati aggiuntivi"
+    
+    note for MarkunoApiTools "Handler messaggi in arrivo:\n1. Registra OnReceiveMessage\n2. Filtra per action='list_elements'\n3. Salva payload in _lastListElementsPayload\n4. Disponibile via GetLastListElements"
+    
+    note for Configurator3D "Azioni principali:\n- open: apre progetto\n- create: crea progetto\n- list_elements: lista elementi\n- add_article: aggiungi articolo"

@@ -1,0 +1,47 @@
+---
+title: "Diagramma 8 - Flusso Completo: Aggiunta Articolo con Varianti"
+---
+
+sequenceDiagram
+    participant AI as AI Assistant
+    participant MCP as MarkunoApiTools
+    participant API as Markuno API
+    participant SR as SignalRService
+    participant Hub as SignalR Hub
+    participant C3D as Configurator 3D
+
+    AI->>MCP: AddArticle(cod, des, cat, l, a, p, ruleset)
+    
+    Note over MCP: Verifica autenticazione
+    alt Non autenticato
+        MCP->>MCP: AutoLoginIfNeeded()
+        MCP->>API: POST /api/login
+        API-->>MCP: Token
+    end
+    
+    Note over MCP: Inserimento articolo base
+    MCP->>API: POST /muconf/radd<br/>(dati articolo)
+    API-->>MCP: Response {data: rowId}
+    
+    Note over MCP: Estrae rowId dalla risposta
+    
+    alt Se ruleset presente
+        Note over MCP: Applicazione varianti
+        MCP->>API: POST /muconf/rget<br/>(projectId, rowId)
+        API-->>MCP: Dati riga correnti {pars: {...}}
+        
+        Note over MCP: Modifica campo pars<br/>con valori ruleset
+        
+        MCP->>API: POST /muconf/rsave<br/>(pars modificato)
+        API-->>MCP: Conferma salvataggio
+    end
+    
+    alt Se receiverId fornito
+        Note over MCP: Notifica client 3D
+        MCP->>SR: CallHubMethodAsync("SendMessage",<br/>receiverId, {action: "open"})
+        SR->>Hub: SendMessage
+        Hub->>C3D: ReceiveMessage
+        Note over C3D: Aggiorna visualizzazione<br/>progetto
+    end
+    
+    MCP-->>AI: JSON Response (success)
