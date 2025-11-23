@@ -195,612 +195,51 @@ L'adozione dell'\ac{mcp} porta vantaggi significativi nell'ecosistema \ac{ai}:
 
 \item \textbf{Roadmap di Adozione:} L'MCP è visto come un passo iniziale e cruciale in una roadmap di adozione graduale dei protocolli AI, fungendo da base per l'accesso agli strumenti prima di protocolli più complessi come ACP, A2A e ANP.\cite{mcp_survey_kent}
 \end{itemize}
-
-\section{Panoramica sulle WebSocket}
-\label{sec:websocket}
-%\paragraph{Structure of the Thesis}
-WebSocket è uno standard (\textit{RFC6455}) per comunicazione bidirezionale full-duplex su connessione TCP persistente \cite{gourko_websocket_thesis}. Una volta stabilita (tramite handshake HTTP), client e server possono inviare messaggi in entrambe le direzioni senza chiusure continue, riducendo l’overhead tipico delle richieste HTTP tradizionali. Questo consente aggiornamenti in tempo reale con bassa latenza e alto throughput \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Ad esempio, WebSocket è ampiamente usato in applicazioni chat, giochi online, dashboard finanziari e servizi di localizzazione in cui servono flussi di dati continui \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Altri vantaggi includono il supporto nativo dei browser moderni (nessun plugin aggiuntivo) e la possibilità di inviare dati binari, riducendo i costi di encoding/decoding rispetto a HTTP/1.0. Inoltre, non è necessario ricaricare la pagina o fare polling ripetuto per ricevere nuovi dati.
-
-Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più complessa: ogni connessione richiede risorse di memoria e CPU per rimanere attiva\cite{gourko_websocket_thesis}. In scenari con molti utenti simultanei, questo può diventare un collo di bottiglia di scalabilità. A livello di sicurezza, è necessario usare sempre WSS (WebSocket sicuro) su TLS per cifrare il traffico\cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}; in caso contrario, la connessione rimane vulnerabile a intercettazioni. Gli stessi WebSocket non hanno meccanismi automatici di riconnessione né controllo del flusso; questi devono essere gestiti manualmente dall’applicazione. Infine, aspetti di sicurezza come l’autenticazione e la validazione dell’origin devono essere implementati con attenzione, poiché errori possono esporre a rischi come XSS/CSRF\cite{gourko_websocket_thesis}
-%\note{At the end, describe the structure of the paper}
-%----------------------------------------------------------------------------------------
-\section{Comunicazione Real-Time}
-\label{sec:comunicazione-realtime}
+\section{WebSocket: Protocollo per Comunicazione Real-Time}
+\label{sec:websocket-protocollo}
 %----------------------------------------------------------------------------------------
 
-% Questa sezione approfondisce le tecnologie per comunicazione real-time utilizzate nel progetto,
-% partendo dal protocollo WebSocket base fino all'astrazione SignalR.
-
-%----------------------------------------------------------------------------------------
-\subsection{SignalR: Astrazione High-Level per Real-Time Communication}
-\label{subsec:signalr-abstrazione}
-%----------------------------------------------------------------------------------------
-
-SignalR è una libreria open-source per ASP.NET Core sviluppata da Microsoft che semplifica l'aggiunta di funzionalità real-time alle applicazioni web. A differenza di WebSocket raw, SignalR fornisce un'astrazione di alto livello che gestisce automaticamente la selezione del trasporto, la riconnessione, il routing dei messaggi e la serializzazione.
-
-\paragraph{Caratteristiche Principali:}
-\begin{itemize}
-\item \textbf{Transport Fallback Automatico:} SignalR tenta di utilizzare WebSocket come trasporto preferito, ma può automaticamente passare a Server-Sent Events (SSE) o Long Polling se WebSocket non è supportato dal client o bloccato da firewall/proxy. Questo garantisce la massima compatibilità senza richiedere logica custom.
-
-\item \textbf{Hub Pattern:} SignalR introduce il concetto di \textit{Hub}, un'astrazione che funziona come punto centrale per le comunicazioni. Gli Hub permettono al server di invocare metodi sui client connessi e viceversa, con supporto per strongly-typed clients tramite interfacce C\#.
-
-\item \textbf{Riconnessione Automatica:} A differenza di WebSocket puro, SignalR gestisce automaticamente le disconnessioni improvvise (network glitch, timeout) e tenta la riconnessione con backoff esponenziale configurabile.
-
-\item \textbf{Scaling Out:} SignalR supporta nativamente lo scale-out tramite backplane (Redis, Azure SignalR Service) per distribuire connessioni su multiple istanze server, fondamentale per applicazioni ad alta disponibilità.
-
-\item \textbf{Strongly-Typed Hubs:} Tramite interfacce generiche (\texttt{Hub<IClient>}), SignalR offre type-safety compile-time per i metodi invocabili sui client, riducendo errori runtime e migliorando la manutenibilità.
-\end{itemize}
-
-\paragraph{Modello Full-Duplex e Pattern di Messaggistica:}
-
-SignalR implementa un modello di comunicazione full-duplex bidirezionale dove:
-\begin{itemize}
-\item \textbf{Server-to-Client (Push):} Il server può invocare metodi sui client in qualsiasi momento, senza polling. Supporta broadcasting (tutti i client), multicasting (gruppi di client) e unicasting (client specifico tramite ConnectionId).
-
-\item \textbf{Client-to-Server (Pull/Push):} I client possono invocare metodi hub sul server, ricevendo risposte sincrone (con return value) o asincrone (via callback).
-
-\item \textbf{Pattern Supportati:}
-  \begin{itemize}
-  \item \textit{Request-Response:} Client invoca metodo hub, server risponde
-  \item \textit{Fire-and-Forget:} Invio messaggio senza attesa risposta
-  \item \textit{Event-Based:} Registrazione callback per eventi specifici
-  \item \textit{Streaming:} Invio dati in stream continuo (Server-to-Client o Client-to-Server)
-  \end{itemize}
-\end{itemize}
-
-\paragraph{Gestione Connessioni e Lifecycle:}
-
-SignalR gestisce automaticamente il ciclo di vita delle connessioni:
-\begin{enumerate}
-\item \textbf{Negotiation:} Il client invia una richiesta HTTP di negoziazione per determinare trasporto disponibile e ottenere connection token
-\item \textbf{Connection:} Stabilimento connessione con trasporto selezionato (WebSocket upgrade se disponibile)
-\item \textbf{Connected:} Il server assegna un ConnectionId univoco al client
-\item \textbf{Heartbeat/Keep-Alive:} Ping periodici per verificare connessione attiva (configurabile, default 15 secondi)
-\item \textbf{Reconnection:} Se connessione persa, client tenta riconnessione automatica
-\item \textbf{Disconnection:} Invocazione di \texttt{OnDisconnectedAsync()} per cleanup risorse
-\end{enumerate}
-
-%----------------------------------------------------------------------------------------
-\subsection{Confronto WebSocket vs SignalR: Motivazioni della Scelta}
-\label{subsec:websocket-vs-signalr}
-%----------------------------------------------------------------------------------------
-
-La scelta di SignalR rispetto a WebSocket raw per questo progetto è motivata da diverse considerazioni tecniche:
-
-\begin{table}[!htbp]
-\centering
-\begin{tabular}{|p{3cm}|p{5cm}|p{5cm}|}
-\hline
-\textbf{Aspetto} & \textbf{WebSocket Raw} & \textbf{SignalR} \\
-\hline
-Compatibilità & Richiede supporto WebSocket client/server & Fallback automatico SSE/Long Polling \\
-\hline
-Riconnessione & Manuale (custom logic) & Automatica con backoff esponenziale \\
-\hline
-Routing messaggi & Custom (parsing manuale) & Hub pattern con metodi tipizzati \\
-\hline
-Serializzazione & Manuale (JSON.stringify/parse) & Automatica con System.Text.Json \\
-\hline
-Scalabilità & Sticky sessions richieste & Backplane Redis/Azure per scale-out \\
-\hline
-Type-Safety & Nessuna (stringhe JSON) & Strongly-typed con interfacce C\# \\
-\hline
-Autenticazione & Custom implementation & Integrazione JWT/Cookie built-in \\
-\hline
-Logging/Monitoring & Custom & ILogger integration, metrics built-in \\
-\hline
-\end{tabular}
-\caption{Confronto tra WebSocket raw e SignalR}
-\label{tab:websocket-signalr-comparison}
-\end{table}
-
-\FloatBarrier
-
-\paragraph{Motivazioni Specifiche del Progetto:}
-
-\begin{itemize}
-\item \textbf{Resilienza Network:} Il configuratore 3D può essere utilizzato da ambienti con network instabile (cantieri, showroom). La riconnessione automatica di SignalR garantisce continuità servizio senza intervento utente.
-
-\item \textbf{Type-Safety End-to-End:} L'uso di \texttt{Hub<IClient>} permette refactoring sicuro e IntelliSense durante sviluppo, riducendo bug runtime.
-
-\item \textbf{Integration con .NET Ecosystem:} SignalR si integra nativamente con Dependency Injection, ILogger, IConfiguration di ASP.NET Core, riducendo boilerplate code.
-
-\item \textbf{Scalabilità Futura:} Se il sistema dovesse scalare a centinaia di client simultanei, SignalR offre path chiaro verso Azure SignalR Service senza riscrittura codice.
-
-\item \textbf{Developer Experience:} SignalR riduce drasticamente il codice necessario rispetto a WebSocket raw (stima: 60-70\% meno codice per funzionalità equivalenti).
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\subsection{Pattern Hub e Strongly-Typed Clients}
-\label{subsec:pattern-hub}
-%----------------------------------------------------------------------------------------
-
-Il pattern Hub di SignalR è centrale nell'architettura del bridge real-time del progetto.
-
-\paragraph{Anatomia di un Hub:}
-
-Un Hub SignalR è una classe C\# che estende \texttt{Hub} o \texttt{Hub<T>}:
-
-\begin{itemize}
-\item \textbf{Hub Methods:} Metodi pubblici invocabili dai client. Possono essere async e restituire \texttt{Task} o \texttt{Task<T>}.
-
-\item \textbf{Context:} Proprietà \texttt{Context} fornisce accesso a informazioni sulla connessione corrente (ConnectionId, User, Headers, QueryString).
-
-\item \textbf{Clients:} Proprietà \texttt{Clients} permette di invocare metodi sui client connessi:
-  \begin{itemize}
-  \item \texttt{Clients.All}: broadcast a tutti
-  \item \texttt{Clients.Client(connectionId)}: unicast a client specifico
-  \item \texttt{Clients.Group(groupName)}: multicast a gruppo
-  \item \texttt{Clients.Caller}: risposta al chiamante
-  \item \texttt{Clients.Others}: tutti tranne chiamante
-  \end{itemize}
-
-\item \textbf{Groups:} Proprietà \texttt{Groups} per aggiungere/rimuovere client da gruppi logici (es. per room-based messaging).
-
-\item \textbf{Lifecycle Hooks:} 
-  \begin{itemize}
-  \item \texttt{OnConnectedAsync()}: invocato alla connessione client
-  \item \texttt{OnDisconnectedAsync(Exception)}: invocato alla disconnessione
-  \end{itemize}
-\end{itemize}
-
-\paragraph{Strongly-Typed Clients:}
-
-Tramite \texttt{Hub<IClient>}, SignalR offre type-safety compile-time:
-
-\begin{verbatim}
-public interface IClient
-{
-    Task GetMessage(Message message);
-    Task GetConnectionId(string connectionId);
-}
-
-public class IwineHub : Hub<IClient>
-{
-    public async Task SendMessage(Message message)
-    {
-        // Type-safe: errore compilazione se metodo non esiste
-        await Clients.All.GetMessage(message);
-    }
-}
-\end{verbatim}
-
-Vantaggi:
-\begin{itemize}
-\item Refactoring sicuro (rename method propaga a chiamanti)
-\item IntelliSense durante sviluppo
-\item Errori compile-time invece di runtime
-\item Documentazione implicita (interfaccia = contratto)
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\section{Protocolli di Comunicazione}
-\label{sec:protocolli-comunicazione}
-%----------------------------------------------------------------------------------------
-
-% Questa sezione approfondisce i protocolli di comunicazione utilizzati nel sistema,
-% con focus su REST API, JSON-RPC 2.0 (core MCP) e il pattern dual-channel.
-
-%----------------------------------------------------------------------------------------
-\subsection{REST API e Architetture RESTful}
-\label{subsec:rest-api}
-%----------------------------------------------------------------------------------------
-
-Il sistema utilizza REST (Representational State Transfer) API per le operazioni sincrone di lettura/scrittura dati sul backend MarkunoAPI.
-
-\paragraph{Principi REST Applicati:}
-
-\begin{itemize}
-\item \textbf{Stateless:} Ogni richiesta HTTP contiene tutte le informazioni necessarie (header Authorization con JWT token). Il server non mantiene stato sessione tra richieste.
-
-\item \textbf{Resource-Based:} Le URL rappresentano risorse (progetti, articoli, catalogo) e non azioni. Esempio: \texttt{/muconf/plist} per lista progetti, \texttt{/muconf/radd} per aggiunta articolo.
-
-\item \textbf{HTTP Verbs:} Utilizzo semantico dei metodi HTTP:
-  \begin{itemize}
-  \item \texttt{GET}: lettura dati (idempotente, cacheable)
-  \item \texttt{POST}: creazione/modifica risorse (nel contesto MarkunoAPI, usato prevalentemente per tutte le operazioni)
-  \item \texttt{PUT}: aggiornamento completo risorsa
-  \item \texttt{DELETE}: eliminazione risorsa
-  \end{itemize}
-
-\item \textbf{JSON over HTTP:} Utilizzo di JSON come formato serializzazione per request/response body, con Content-Type \texttt{application/json}.
-
-\item \textbf{Status Codes Semantici:}
-  \begin{itemize}
-  \item \texttt{200 OK}: richiesta riuscita
-  \item \texttt{201 Created}: risorsa creata
-  \item \texttt{400 Bad Request}: errore validazione client
-  \item \texttt{401 Unauthorized}: token mancante/invalido
-  \item \texttt{404 Not Found}: risorsa non trovata
-  \item \texttt{500 Internal Server Error}: errore server
-  \end{itemize}
-\end{itemize}
-
-\paragraph{Esempi di Endpoint MarkunoAPI:}
-
-\begin{itemize}
-\item \texttt{POST /api/login}: autenticazione utente, ritorna JWT token
-\item \texttt{POST /muconf/plist}: lista progetti con filtri
-\item \texttt{POST /muconf/pcreate}: creazione nuovo progetto
-\item \texttt{POST /muconf/radd}: aggiunta articolo a progetto
-\item \texttt{POST /muconf/rget}: recupero dati riga progetto
-\item \texttt{POST /muconf/rsave}: salvataggio modifiche riga
-\item \texttt{POST /mucalls/search}: ricerca catalogo prodotti
-\end{itemize}
-
-\paragraph{Limitazioni REST per Real-Time:}
-
-REST è intrinsecamente request-response e non supporta nativamente push dal server. Per notifiche real-time al configuratore 3D, è necessario un canale complementare (SignalR), dando origine al pattern dual-channel.
-
-%----------------------------------------------------------------------------------------
-\subsection{JSON-RPC 2.0: Fondamenti del Model Context Protocol}
-\label{subsec:json-rpc}
-%----------------------------------------------------------------------------------------
-
-JSON-RPC 2.0 è un protocollo di remote procedure call (RPC) leggero e stateless che utilizza JSON per encoding dei messaggi. È il protocollo base su cui è costruito l'MCP.
-
-\paragraph{Struttura Messaggi JSON-RPC:}
-
-Un messaggio JSON-RPC può essere:
-
-\begin{enumerate}
-\item \textbf{Request (chiamata metodo):}
-\begin{verbatim}
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "AddArticle",
-    "arguments": { "cod": "sptest", "des": "Scaffale" }
-  },
-  "id": 1
-}
-\end{verbatim}
-
-\item \textbf{Response (successo):}
-\begin{verbatim}
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": true,
-    "rowId": "8"
-  },
-  "id": 1
-}
-\end{verbatim}
-
-\item \textbf{Response (errore):}
-\begin{verbatim}
-{
-  "jsonrpc": "2.0",
-  "error": {
-    "code": -32600,
-    "message": "Invalid Request"
-  },
-  "id": 1
-}
-\end{verbatim}
-
-\item \textbf{Notification (no response expected):}
-\begin{verbatim}
-{
-  "jsonrpc": "2.0",
-  "method": "notifications/progress",
-  "params": { "progress": 50 }
-}
-\end{verbatim}
-\end{enumerate}
-
-\paragraph{MCP su JSON-RPC 2.0:}
-
-L'MCP utilizza JSON-RPC per standardizzare la comunicazione tra Host, Client e Server:
-
-\begin{itemize}
-\item \textbf{Tool Invocation:} Quando l'AI decide di invocare un tool, l'MCP Host invia una request JSON-RPC \texttt{tools/call} al Server MCP.
-
-\item \textbf{Resource Fetching:} Request \texttt{resources/read} per ottenere contenuto risorsa.
-
-\item \textbf{Prompt Rendering:} Request \texttt{prompts/get} per template prompt.
-
-\item \textbf{Sampling:} Il Server può richiedere inferenza LLM con request \texttt{sampling/createMessage} al Client.
-
-\item \textbf{Lifecycle:} Messaggi \texttt{initialize}, \texttt{initialized} per handshake iniziale e negoziazione capacità.
-\end{itemize}
-
-\paragraph{Vantaggi JSON-RPC per MCP:}
-
-\begin{itemize}
-\item \textbf{Semplicità:} Protocollo minimalista, facile da implementare in qualsiasi linguaggio
-\item \textbf{Stateless:} Ogni richiesta è indipendente, facilitando debugging e retry
-\item \textbf{Bidirezionale:} Sia client che server possono inviare request (fondamentale per Sampling)
-\item \textbf{Estensibile:} Facile aggiungere nuovi metodi mantenendo compatibilità
-\item \textbf{Type-safe:} Con schema JSON, validazione strutturale garantita
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\subsection{Dual-Channel Communication Pattern}
-\label{subsec:dual-channel}
-%----------------------------------------------------------------------------------------
-
-L'architettura del sistema implementa un pattern di comunicazione dual-channel che combina REST API (HTTP) e SignalR (WebSocket) per sfruttare i punti di forza di entrambi.
-
-\paragraph{Canale REST (HTTP):}
-\begin{itemize}
-\item \textbf{Uso:} Operazioni sincrone CRUD (Create, Read, Update, Delete)
-\item \textbf{Esempi:} Login, GetProjects, AddArticle (inserimento base), SearchCatalog
-\item \textbf{Vantaggi:} Stateless, cacheable, retry automatico con HttpClient, logging semplice
-\item \textbf{Direzione:} Unidirezionale MCP Server \(\rightarrow\) MarkunoAPI
-\end{itemize}
-
-\paragraph{Canale SignalR (WebSocket):}
-\begin{itemize}
-\item \textbf{Uso:} Notifiche real-time, comandi al client 3D, risposte asincrone
-\item \textbf{Esempi:} OpenProject, CreateProject, ListElements, notifiche aggiornamento dati
-\item \textbf{Vantaggi:} Bidirezionale, low-latency, push dal server, connessione persistente
-\item \textbf{Direzione:} Bidirezionale MCP Server \(\leftrightarrow\) IwineHub \(\leftrightarrow\) Configurator3D
-\end{itemize}
-
-\paragraph{Workflow Tipico Dual-Channel:}
-
-Esempio: Aggiunta articolo con notifica client 3D
-
-\begin{enumerate}
-\item MCP Tool riceve comando da AI: "Aggiungi scaffale al progetto"
-\item \textbf{REST}: POST /muconf/radd per inserire articolo base \(\rightarrow\) riceve rowId
-\item \textbf{REST}: POST /muconf/rget per recuperare stato articolo
-\item \textbf{REST}: POST /muconf/rsave per salvare varianti applicate
-\item \textbf{SignalR}: SendMessage("open", projectId) per notificare client 3D
-\item Client 3D riceve notifica via SignalR \(\rightarrow\) GET /muconf/pget via REST
-\item Client aggiorna vista 3D con nuovo articolo
-\end{enumerate}
-
-\paragraph{Vantaggi del Pattern:}
-
-\begin{itemize}
-\item \textbf{Separation of Concerns:} REST per dati, SignalR per eventi/comandi
-\item \textbf{Resilienza:} Fallimento SignalR non impedisce operazioni CRUD via REST
-\item \textbf{Performance:} REST cacheable, SignalR per latenza minima su notifiche
-\item \textbf{Scalabilità:} REST scale-out semplice, SignalR con backplane per sticky sessions
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\section{Autenticazione e Sicurezza}
-\label{sec:autenticazione-sicurezza}
-%----------------------------------------------------------------------------------------
-
-% Questa sezione approfondisce i meccanismi di autenticazione e sicurezza utilizzati
-% nel sistema, con focus su JWT, Bearer Token e CORS.
-
-%----------------------------------------------------------------------------------------
-\subsection{JWT (JSON Web Tokens)}
-\label{subsec:jwt}
-%----------------------------------------------------------------------------------------
-
-JWT è uno standard aperto (RFC 7519) per la creazione di token di accesso che permettono la propagazione sicura di identità e claim tra parti fidate.
-
-\paragraph{Struttura di un JWT:}
-
-Un JWT è composto da tre parti separate da punti:
-
-\texttt{header.payload.signature}
-
-\begin{enumerate}
-\item \textbf{Header:} Metadati sul token (algoritmo firma, tipo token)
-\begin{verbatim}
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}
-\end{verbatim}
-
-\item \textbf{Payload:} Claims (affermazioni) sull'utente e metadata
-\begin{verbatim}
-{
-  "sub": "1234567890",    // Subject (user ID)
-  "name": "John Doe",     // Custom claim
-  "iat": 1516239022,      // Issued At
-  "exp": 1516242622       // Expiration Time
-}
-\end{verbatim}
-
-\item \textbf{Signature:} Firma crittografica per verificare integrità
-\begin{verbatim}
-HMACSHA256(
-  base64UrlEncode(header) + "." +
-  base64UrlEncode(payload),
-  secret
-)
-\end{verbatim}
-\end{enumerate}
-
-\paragraph{Flusso Autenticazione JWT nel Sistema:}
-
-\begin{enumerate}
-\item \textbf{Login:} Client invia credenziali (username/password) a POST /api/login
-\item \textbf{Validazione:} MarkunoAPI valida credenziali contro database utenti
-\item \textbf{Generazione Token:} Se valide, genera JWT con claims utente (id, name, level, ruoli)
-\item \textbf{Response:} Ritorna JWT nel campo \texttt{LoginResponse.Data.User.Token}
-\item \textbf{Storage:} MCP Server salva token in variabile statica \texttt{\_authToken}
-\item \textbf{Utilizzo:} Per ogni richiesta REST successiva, include header \texttt{Authorization: Bearer <token>}
-\item \textbf{Validazione Server:} MarkunoAPI verifica firma JWT e claims (scadenza, issuer)
-\end{enumerate}
-
-\paragraph{Vantaggi JWT:}
-
-\begin{itemize}
-\item \textbf{Stateless:} Server non deve mantenere sessioni in memoria/database
-\item \textbf{Self-contained:} Tutti i dati necessari sono nel token (claims)
-\item \textbf{Scalabile:} Nessuna condivisione stato tra istanze server
-\item \textbf{Cross-domain:} Funziona con CORS per chiamate cross-origin
-\item \textbf{Standard:} Librerie disponibili per ogni linguaggio/piattaforma
-\end{itemize}
-
-\paragraph{Security Considerations:}
-
-\begin{itemize}
-\item \textbf{Expiration:} JWT deve avere claim \texttt{exp} (expiration time), tipicamente 15-30 minuti
-\item \textbf{HTTPS Only:} JWT trasmessi solo su HTTPS per prevenire intercettazione
-\item \textbf{Secret Protection:} Chiave firma JWT (secret) deve essere robusta e mai esposta
-\item \textbf{Token Refresh:} Implementare refresh token per sessioni lunghe senza richiedere re-login
-\item \textbf{Revocation:} JWT non revocabili nativamente (workaround: blacklist o short expiration)
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\subsection{Bearer Token Authentication}
-\label{subsec:bearer-token}
-%----------------------------------------------------------------------------------------
-
-Bearer Token Authentication è uno schema di autenticazione HTTP (RFC 6750) in cui il client invia un token (tipicamente JWT) nell'header Authorization delle richieste.
-
-\paragraph{Formato Header:}
-
-\begin{verbatim}
-Authorization: Bearer <token>
-\end{verbatim}
-
-Esempio concreto:
-\begin{verbatim}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi...
-\end{verbatim}
-
-\paragraph{Implementazione nel Sistema:}
-
-Nel progetto, ogni tool MCP che effettua chiamate REST:
-
-\begin{enumerate}
-\item Verifica presenza \texttt{\_authToken} (metodo \texttt{EnsureAuthenticatedAsync()})
-\item Se assente, esegue auto-login con credenziali default da \texttt{appsettings.json}
-\item Aggiunge header Authorization a HttpClient (metodo \texttt{AddAuthHeader()})
-\item HttpClient include automaticamente header in tutte le richieste successive
-\end{enumerate}
-
-Snippet concettuale:
-\begin{verbatim}
-private void AddAuthHeader()
-{
-    if (!string.IsNullOrEmpty(_authToken))
-    {
-        _httpClient.DefaultRequestHeaders.Authorization = 
-            new AuthenticationHeaderValue("Bearer", _authToken);
-    }
-}
-\end{verbatim}
-
-\paragraph{Gestione Scadenza Token:}
-
-Quando token scade, MarkunoAPI risponde con \texttt{401 Unauthorized}:
-
-\begin{enumerate}
-\item HttpClient riceve StatusCode 401
-\item Tool MCP rileva errore e ritorna messaggio user-friendly:
-\begin{verbatim}
-{
-  "success": false,
-  "error": "Token scaduto, effettua nuovo login",
-  "statusCode": 401
-}
-\end{verbatim}
-\item AI Assistant può invocare tool \texttt{Login} per ottenere nuovo token
-\item Operazione originale può essere ritentata
-\end{enumerate}
-
-\paragraph{Vantaggi Bearer Token:}
-
-\begin{itemize}
-\item \textbf{Simplicità:} Schema standardizzato, facile da implementare
-\item \textbf{Stateless:} Nessuna sessione server-side
-\item \textbf{Compatibilità:} Supportato da tutti i client HTTP
-\item \textbf{Sicurezza:} Token opaco per client, validato solo da server
-\end{itemize}
-
-%----------------------------------------------------------------------------------------
-\subsection{CORS e Cross-Origin Security}
-\label{subsec:cors}
-%----------------------------------------------------------------------------------------
-
-CORS (Cross-Origin Resource Sharing) è un meccanismo di sicurezza del browser che controlla se una pagina web può effettuare richieste HTTP a un dominio diverso da quello di origine.
-
-\paragraph{Problema Same-Origin Policy:}
-
-Per sicurezza, i browser bloccano richieste JavaScript a domini diversi (diverso protocollo, dominio o porta). Esempio:
-\begin{itemize}
-\item Pagina: \texttt{https://app.markuno.com}
-\item API: \texttt{https://api.markuno.com} (dominio diverso \(\rightarrow\) bloccato)
-\item SignalR: \texttt{https://signalr.markuno.com:7193} (dominio e porta diversi \(\rightarrow\) bloccato)
-\end{itemize}
-
-\paragraph{Soluzione CORS:}
-
-Il server deve inviare header HTTP che autorizzano l'origin della richiesta:
-
-\begin{verbatim}
-Access-Control-Allow-Origin: https://app.markuno.com
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE
-Access-Control-Allow-Headers: Authorization, Content-Type
-Access-Control-Allow-Credentials: true
-\end{verbatim}
-
-\paragraph{CORS Preflight Request:}
-
-Per richieste "non semplici" (es. con header Authorization), il browser invia prima una richiesta OPTIONS (preflight) per chiedere permesso:
-
-\begin{enumerate}
-\item Browser invia OPTIONS request con header:
-\begin{verbatim}
-Origin: https://app.markuno.com
-Access-Control-Request-Method: POST
-Access-Control-Request-Headers: Authorization
-\end{verbatim}
-
-\item Server risponde con header CORS:
-\begin{verbatim}
-Access-Control-Allow-Origin: https://app.markuno.com
-Access-Control-Allow-Methods: POST
-Access-Control-Allow-Headers: Authorization
-\end{verbatim}
-
-\item Se permesso, browser invia richiesta effettiva POST
-\end{enumerate}
-
-\paragraph{Configurazione CORS nel Progetto:}
-
-Nel SignalR Server (IwineHub), configurazione ASP.NET Core:
-
-\begin{verbatim}
-builder.Services.AddCors(options => {
-    options.AddPolicy("Production", policy => {
-        policy.WithOrigins(
-            "https://configurator.markuno.com",
-            "https://app.markuno.com"
-        )
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials(); // Necessario per SignalR
-    });
-    
-    options.AddPolicy("Development", policy => {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
-app.UseCors(environment.IsDevelopment() ? "Development" : "Production");
-\end{verbatim}
-
-\paragraph{CORS per SignalR:}
-
-SignalR richiede \texttt{AllowCredentials()} perché utilizza cookie o token per autenticazione. Questo implica che \texttt{AllowAnyOrigin()} non può essere usato in produzione (security risk), ma solo origin specifici.
-
-\paragraph{Security Best Practices CORS:}
-
-\begin{itemize}
-\item \textbf{Whitelist Explicit Origins:} Mai usare \texttt{AllowAnyOrigin()} in produzione
-\item \textbf{Least Privilege:} Specificare solo Methods/Headers necessari
-\item \textbf{HTTPS Only:} CORS con credenziali richiede HTTPS
-\item \textbf{Validation Server-Side:} CORS è controllo browser, validare sempre input server-side
-\item \textbf{Environment-Specific:} Policy diverse per Development vs Production
-\end{itemize}
+% NUOVA SEZIONE - Contenuto teorico compatto (1-1.5 pagine)
+%
+% Contenuti da sviluppare:
+%
+% A) Introduzione WebSocket (0.5 pagine):
+% - RFC 6455: standard IETF per comunicazione bidirezionale full-duplex
+% - Problema risolto: limitazioni HTTP polling (overhead, latenza, scalabilità)
+% - Handshake HTTP Upgrade: transizione da HTTP a protocollo WebSocket
+% - Connessione persistente su TCP: mantiene socket aperto per comunicazione continua
+%
+% B) Caratteristiche Protocollo (0.5 pagine):
+% - Full-duplex: client e server inviano messaggi contemporaneamente
+% - Low-latency: no overhead header HTTP ripetuti (frame leggeri)
+% - Message-oriented: supporto frame text (UTF-8) e binary
+% - Keep-alive: ping/pong frames per mantenere connessione attiva
+%
+% C) Vantaggi WebSocket (0.25 pagine):
+% - Performance: riduzione latenza 50-80% vs HTTP long polling
+% - Scalabilità: minor overhead rete, meno connessioni simultanee
+% - Real-time bidirectional: server push senza polling client
+% - Supporto browser: standard nativo (Chrome, Firefox, Safari, Edge)
+%
+% D) Limitazioni Protocollo (0.25 pagine):
+% - No fallback automatico: se WebSocket non supportato, connessione fallisce
+% - Riconnessione manuale: developer deve implementare retry logic
+% - Gestione stato: server deve tracciare connessioni attive (memory overhead)
+% - Sicurezza: richiede WSS (WebSocket Secure su TLS) per traffico cifrato
+% - Cross-origin: CORS deve essere configurato correttamente
+%
+% E) Collegamento con il Progetto (breve paragrafo):
+% - WebSocket è fondamento per SignalR (astrazione high-level)
+% - Progetto usa SignalR invece di WebSocket raw per produttività e robustezza
+% - Dettagli implementativi SignalR in Cap. 3 Stack Tecnologico
+%
+% NO code snippet (protocollo standard, teoria)
+%
+% Elementi visivi OPZIONALI:
+% - Diagramma handshake HTTP → WebSocket upgrade
+% - Tabella confronto HTTP polling vs WebSocket (latenza, overhead, scalabilità)
+%
+% Pagine stimate: 1-1.5
 
 %----------------------------------------------------------------------------------------
 \section{Configuratori 3D: Panoramica e Contesto}
@@ -935,525 +374,474 @@ Questo lavoro affronta le sfide sopra attraverso:
 \item Gestione robusta errori con partial success e messaggi user-friendly
 \item Validazione end-to-end con 10+ scenari di test
 \end{itemize}
+%\paragraph{Structure of the Thesis}
+WebSocket è uno standard (\textit{RFC6455}) per comunicazione bidirezionale full-duplex su connessione TCP persistente \cite{gourko_websocket_thesis}. Una volta stabilita (tramite handshake HTTP), client e server possono inviare messaggi in entrambe le direzioni senza chiusure continue, riducendo l’overhead tipico delle richieste HTTP tradizionali. Questo consente aggiornamenti in tempo reale con bassa latenza e alto throughput \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Ad esempio, WebSocket è ampiamente usato in applicazioni chat, giochi online, dashboard finanziari e servizi di localizzazione in cui servono flussi di dati continui \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Altri vantaggi includono il supporto nativo dei browser moderni (nessun plugin aggiuntivo) e la possibilità di inviare dati binari, riducendo i costi di encoding/decoding rispetto a HTTP/1.0. Inoltre, non è necessario ricaricare la pagina o fare polling ripetuto per ricevere nuovi dati.
 
+Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più complessa: ogni connessione richiede risorse di memoria e CPU per rimanere attiva\cite{gourko_websocket_thesis}. In scenari con molti utenti simultanei, questo può diventare un collo di bottiglia di scalabilità. A livello di sicurezza, è necessario usare sempre WSS (WebSocket sicuro) su TLS per cifrare il traffico\cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}; in caso contrario, la connessione rimane vulnerabile a intercettazioni. Gli stessi WebSocket non hanno meccanismi automatici di riconnessione né controllo del flusso; questi devono essere gestiti manualmente dall’applicazione. Infine, aspetti di sicurezza come l’autenticazione e la validazione dell’origin devono essere implementati con attenzione, poiché errori possono esporre a rischi come XSS/CSRF\cite{gourko_websocket_thesis}
+%----------------------------------------------------------------------------------------
 %----------------------------------------------------------------------------------------
 \chapter{Stack Tecnologico}
 \label{chap:stack-tecnologico}
 %----------------------------------------------------------------------------------------
 
-% Questo capitolo approfondisce le tecnologie e gli strumenti utilizzati nel progetto,
-% fornendo motivazioni per ogni scelta tecnologica e spiegando come le diverse
-% componenti si integrano nell'architettura proposta.
+% OBIETTIVO DEL CAPITOLO:
+% Fornire le conoscenze tecniche essenziali per comprendere le scelte architetturali
+% del progetto. Focus su COSA sono le tecnologie principali, PERCHÉ sono state scelte
+% e QUALI caratteristiche le rendono determinanti.
+%
+% APPROCCIO:
+% - Spiegazioni concise e mirate (NO manuali completi)
+% - Confronti con alternative (solo tabelle comparative)
+% - Motivazioni tecniche chiare
+% - Esempi concettuali (NO dettagli implementativi)
+%
+% SEPARAZIONE DELLE RESPONSABILITÀ:
+% - Cap. 3 (questo): COSA/PERCHÉ - conoscenze tecnologiche (12-15 pagine)
+% - Cap. 4 (Progettazione): COME architettura - design patterns, diagrammi
+% - Cap. 5 (Implementazione): COME codice - classi, metodi, configurazioni
 
 %----------------------------------------------------------------------------------------
-\section{Panoramica Architetturale dello Stack}
+\section{Panoramica dello Stack}
 \label{sec:panoramica-stack}
 %----------------------------------------------------------------------------------------
 
-% Questa sezione fornisce una visione d'insieme dello stack tecnologico su tre livelli:
-% 
-% Contenuti da sviluppare:
-% - Presentazione layer architetturali: Backend (MCP Server), Bridge (SignalR), Frontend (Configurator3D)
-% - Elenco tecnologie principali per ogni layer con versioni
-% - Diagramma o tabella riassuntiva dello stack completo
-% - Motivazioni scelta stack moderno (.NET 8, TypeScript, cloud-native)
-% - Criteri di selezione: performance, produttività, manutenibilità, ecosistema
-% - Collegamento tra stack tecnologico e requisiti architetturali del capitolo precedente
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Tabella riassuntiva stack per layer, eventuale diagramma
+% Contenuti da sviluppare (2 pagine):
+%
+% A) Visione d'insieme dello stack (0.7 pagine):
+% - Organizzazione per layer funzionali:
+%   * Backend Platform: .NET 8 LTS + C# 12 + ASP.NET Core
+%   * Communication Layer: SignalR + WebSocket + REST + JSON-RPC 2.0
+%   * Security Layer: JWT (RFC 7519) + CORS + HTTPS/WSS
+%   * Frontend Integration: TypeScript 5.x + @microsoft/signalr
+%
+% B) Criteri di selezione tecnologica (0.6 pagine):
+% - **Modernità**: stack aggiornato 2023-2024 con supporto LTS
+% - **Performance**: throughput elevato per real-time (<10ms latency)
+% - **Type-safety**: tipizzazione statica end-to-end (.NET ↔ TypeScript)
+% - **Ecosistema**: librerie mature, documentazione completa, community attiva
+% - **Interoperabilità**: compatibilità nativa con MCP Protocol (JSON-RPC)
+% - **Manutenibilità**: pattern consolidati, tooling avanzato
+%
+% C) Coerenza con requisiti progetto (0.7 pagine):
+% - Real-time: SignalR per notifiche bidirezionali low-latency
+% - Scalabilità: architettura stateless con JWT authentication
+% - Integrazione MCP: supporto nativo JSON-RPC e stdio transport
+% - Configurator3D: SDK SignalR JavaScript per web client
+%
+% Tabella 3.1: Stack Technology Summary (COMPATTA)
+% | Layer          | Tecnologia         | Versione | Motivazione                      |
+% |----------------|--------------------|----------|----------------------------------|
+% | Runtime        | .NET               | 8 LTS    | Performance + LTS + ecosistema   |
+% | Language       | C#                 | 12       | Type-safety + async/await        |
+% | Web Framework  | ASP.NET Core       | 8.0      | DI + hosting SignalR             |
+% | MCP Integration| MCP .NET SDK       | 0.6.0    | Type-safe tool definition        |
+% | Real-Time Comm | SignalR            | 8.0      | Auto-reconnect + fallback        |
+% | Authentication | JWT Bearer         | RFC 7519 | Stateless + scalable             |
+% | Security       | CORS               | W3C      | Cross-origin frontend            |
+% | Transport Sec  | HTTPS/WSS          | TLS 1.3  | End-to-end encryption            |
+% | Frontend Lang  | TypeScript         | 5.x      | Type-safety + IntelliSense       |
+% | Frontend SDK   | @microsoft/signalr | 8.x      | Browser SignalR client           |
+%
+% Elementi visivi:
+% - Tabella 3.1: Stack summary (10 righe, 4 colonne)
+%
+% Pagine stimate: 2
 
 %----------------------------------------------------------------------------------------
-\section{Backend Stack}
-\label{sec:backend-stack}
+\section{Piattaforma Backend .NET}
+\label{sec:backend-net}
 %----------------------------------------------------------------------------------------
 
-% Questa sezione approfondisce le tecnologie .NET utilizzate per il MCP Server
+% FOCUS: Panoramica essenziale .NET 8, C# 12, ASP.NET Core, MCP SDK
+% Approccio: COMPATTO, spiegare COSA/PERCHÉ, NO dettagli implementativi
 
 %----------------------------------------------------------------------------------------
-\subsection{.NET 8/9 Platform: Motivazioni e Vantaggi}
-\label{subsec:dotnet-platform}
+\subsection{.NET 8 e C\# 12: Piattaforma e Linguaggio}
+\label{subsec:dotnet-csharp}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - Presentazione piattaforma .NET (evoluzione da .NET Framework a .NET Core/.NET 5+)
-% - Motivazioni scelta .NET 8 (LTS) o .NET 9 (STS): supporto lungo termine, performance, cross-platform
-% - Confronto con alternative: Python, Node.js, Java, Go
-% - Vantaggi specifici per progetto MCP:
-%   * Performance runtime (JIT compiler, GC ottimizzato)
-%   * Async/await nativo per I/O-bound operations
-%   * Ecosistema ricco (NuGet packages)
-%   * Tooling eccellente (Visual Studio, VS Code)
-%   * Cross-platform deployment (Windows, Linux, Docker)
-% - Statistiche performance (benchmark confronto con altre piattaforme)
-% - Supporto LTS: aggiornamenti sicurezza fino a 3 anni
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Tabella confronto .NET vs alternative, grafico performance
+% Contenuti da sviluppare (1.5 pagine):
+%
+% A) .NET 8: Piattaforma (0.5 pagine):
+% - Piattaforma unified open-source cross-platform (Windows/Linux/macOS)
+% - Evoluzione: .NET Framework (Windows-only) → .NET Core → .NET 5+ unified
+% - .NET 8 LTS (novembre 2023): supporto 3 anni (fino novembre 2026)
+% - Componenti essenziali:
+%   * CoreCLR: runtime con JIT compilation e Garbage Collector
+%   * Librerie base: System.*, Collections, IO, Networking
+%   * ASP.NET Core: framework web per API e SignalR
+%   * NuGet: package manager
+%
+% B) C# 12: Linguaggio (0.4 pagine):
+% - Linguaggio object-oriented type-safe, rilasciato con .NET 8
+% - Paradigmi: OOP, functional (LINQ), async/await nativo
+% - Feature rilevanti progetto:
+%   * **Async/await**: gestione I/O asincrono (HTTP, SignalR non-blocking)
+%   * **LINQ**: query in-memory eleganti
+%   * **Pattern matching**: switch expressions per routing
+%   * **Nullable reference types**: null-safety compile-time
+%   * **Records**: DTOs immutabili per request/response
+%
+% C) PERCHÉ .NET 8 + C# 12 (0.6 pagine):
+%
+% Tabella 3.2: .NET vs Alternative Backend
+% | Aspetto     | .NET 8   | Python   | Node.js | Java    |
+% |-------------|----------|----------|---------|---------|
+% | Performance | ★★★★★    | ★★☆☆☆    | ★★★☆☆   | ★★★★☆   |
+% | Async Model | async/await | asyncio | async  | CompletableFuture |
+% | Type Safety | Compiled | Optional | No      | Compiled|
+% | MCP SDK     | ✅ Ufficiale| ✅    | ✅      | ❌      |
+%
+% Motivazioni scelta:
+% - **Performance**: throughput elevato per real-time
+% - **Async/await ergonomico**: sintassi pulita vs callback hell
+% - **Type-safety**: compile-time errors
+% - **MCP SDK availability**: package NuGet ufficiale
+% - **Cross-platform**: deploy Docker Linux
+%
+% Elementi visivi:
+% - Tabella 3.2: Comparison matrix (4×4)
+%
+% Pagine stimate: 1.5
 
 %----------------------------------------------------------------------------------------
-\subsection{C\# 12: Feature Moderne Utilizzate}
-\label{subsec:csharp-features}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Panoramica linguaggio C# versione 12 (ultima release con .NET 8)
-% - Feature moderne sfruttate nel progetto:
-%   * Primary Constructors: riduzione boilerplate per DI
-%   * Collection Expressions: sintassi concisa per liste
-%   * Pattern Matching avanzato: switch expressions per gestione errori HTTP
-%   * Nullable Reference Types: prevenzione NullReferenceException
-%   * Records: immutabilità per DTOs
-%   * Async/await: gestione asincrona I/O
-% - Esempi codice concreto dal progetto per ogni feature
-% - Vantaggi type-safety: errori compile-time invece di runtime
-% - Produttività sviluppo: meno codice, più leggibile
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippets per ogni feature
-
-%----------------------------------------------------------------------------------------
-\subsection{ASP.NET Core: Framework Web}
+\subsection{ASP.NET Core: Infrastructure Framework}
 \label{subsec:aspnet-core}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - Presentazione framework ASP.NET Core per applicazioni web/API
-% - Utilizzo nel progetto anche se MCP Server non è web server classico:
-%   * Dependency Injection container (Microsoft.Extensions.DependencyInjection)
-%   * Configuration system (Microsoft.Extensions.Configuration)
-%   * Logging infrastructure (Microsoft.Extensions.Logging)
-%   * Middleware pipeline per hosting service
-% - Vantaggi framework maturo: best practices consolidate
-% - Integration con MCP SDK: hosting as console application con ASP.NET services
-% - Kestrel web server per IwineHub SignalR bridge
-% 
-% Pagine stimate: 1-2
-% Elementi visivi: Diagramma architettura ASP.NET Core utilizzata
+% Contenuti da sviluppare (1 pagina):
+%
+% A) COSA è ASP.NET Core (0.4 pagine):
+% - Framework web moderno cross-platform per .NET
+% - Componenti: Kestrel web server, middleware pipeline, DI container, configuration, logging
+%
+% B) PERCHÉ ASP.NET Core (0.3 pagine):
+% - **Performance**: Kestrel high-throughput (benchmark TechEmpower top 10)
+% - **DI nativo**: IoC container built-in
+% - **Middleware pipeline**: estensibilità
+%
+% C) Ruolo nel progetto (0.3 pagine):
+% - NON usato per hosting HTTP REST API (MarkunoAPI è esterno)
+% - Utilizzo SOLO per infrastruttura:
+%   * Dependency Injection: registrazione servizi
+%   * Configuration: caricamento appsettings.json
+%   * Logging: ILogger structured logging
+%   * SignalR hosting: Kestrel espone IwineHub
+%
+% Pagine stimate: 1
 
 %----------------------------------------------------------------------------------------
-\subsection{MCP SDK: Implementazione Protocollo}
+\subsection{MCP SDK: Astrazione Tool Definition}
 \label{subsec:mcp-sdk}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - Presentazione package NuGet ModelContextProtocol (versione utilizzata)
-% - Componenti SDK:
-%   * McpServer: classe base per server MCP
-%   * Tool Attributes: [McpTool], [McpToolParam] per decorazione metodi
-%   * JSON-RPC handler: parsing automatico messaggi
-%   * Stdio transport: comunicazione via stdin/stdout
-%   * Reflection-based discovery: scansione automatica tool
-% - Workflow implementazione tool:
-%   1. Definire classe con metodi pubblici
-%   2. Decorare con [McpTool] e [McpToolParam]
-%   3. Registrare in DI container
-%   4. SDK genera automaticamente schema JSON
-% - Vantaggi SDK: riduce boilerplate, type-safe, documentazione automatica
-% - Limitazioni: reflection overhead (accettabile per use case)
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippet tool definition, diagramma flusso tool invocation
+% Contenuti da sviluppare (1 pagina - RIDOTTA da 2.5):
+%
+% A) COSA è MCP SDK (0.4 pagine):
+% - Package NuGet: ModelContextProtocol (versione 0.6.0)
+% - Framework per implementazione server MCP in .NET
+% - Componenti: McpServer base class, [McpTool] attributes, JSON-RPC handler, stdio transport
+%
+% B) PERCHÉ MCP SDK (0.6 pagine):
+%
+% Confronto: Manuale vs SDK
+%
+% **Implementazione manuale JSON-RPC**:
+% - Parsing, validazione, routing, serializzazione, error handling manuale
+% - Stima: ~500 linee codice boilerplate per 10 tool
+%
+% **Con MCP SDK**:
+% - Tutto automatico: parsing, validazione, routing, serializzazione, errors
+% - Stima: ~10 linee per tool (solo business logic)
+%
+% Vantaggi SDK:
+% - **Boilerplate reduction**: ~95% meno codice
+% - **Type-safety**: parametri validati compile-time
+% - **Developer experience**: IntelliSense, debugging
+%
+% Elementi visivi:
+% - Diagramma 3.3: MCP SDK workflow (AI → JSON-RPC → SDK → method)
+%
+% Pagine stimate: 1
 
 %----------------------------------------------------------------------------------------
-\section{Comunicazione e Serializzazione}
-\label{sec:comunicazione-serializzazione}
+\section{Architettura della Comunicazione}
+\label{sec:comunicazione}
 %----------------------------------------------------------------------------------------
 
-% Questa sezione approfondisce tecnologie per comunicazione HTTP/WebSocket e serializzazione dati
+% FOCUS: Protocolli comunicazione client-server
+% Approccio: COMPATTO per protocolli base, DETTAGLIATO per SignalR
 
 %----------------------------------------------------------------------------------------
-\subsection{HttpClient: Gestione Chiamate REST}
-\label{subsec:httpclient}
+\subsection{Protocolli di Base: REST, JSON-RPC, WebSocket}
+\label{subsec:protocolli-base}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - Classe HttpClient per chiamate HTTP in .NET
-% - Anti-pattern comune: creazione multipla istanze HttpClient → socket exhaustion
-% - Pattern corretto: IHttpClientFactory per pooling connessioni
-% - Vantaggi IHttpClientFactory:
-%   * Socket pooling e reuse
-%   * DNS refresh automatico
-%   * Named/typed clients per configurazioni multiple
-%   * Handler pipeline per cross-cutting concerns (auth, logging, retry)
-% - Implementazione nel progetto:
-%   * DelegatingHandler per Authorization header automatico
-%   * Timeout configuration
-%   * Error handling e retry logic
-% - Best practices: async/await, cancellation tokens, disposing
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippet IHttpClientFactory setup, diagramma handler pipeline
+% Contenuti da sviluppare (1.5 pagine - UNISCE 3 protocolli):
+%
+% A) REST API (0.5 pagine):
+% - COSA: Architectural style HTTP-based, stateless, resource-based
+% - Principi: HTTP verbs (GET/POST/PUT/DELETE), URI risorse, JSON representations
+% - PERCHÉ: standard universale, caching, idempotenza
+% - Ruolo progetto: MarkunoAPI endpoints (POST /muconf/plist, /pcreate, /radd)
+% - Limitazione: request-response only, no server push → serve SignalR
+%
+% B) JSON-RPC 2.0 (0.5 pagine):
+% - COSA: Protocollo RPC lightweight, spec 2.0 del 2010
+% - Struttura: { jsonrpc, method, params, id } / { jsonrpc, result, id }
+% - PERCHÉ: semplicità (spec 10 pag vs SOAP 1000+), bidirezionale, stateless
+% - Ruolo progetto: MCP Protocol usa JSON-RPC per AI ↔ MCP Server
+%   * Methods: initialize, tools/list, tools/call
+%   * MCP SDK gestisce parsing/serializzazione automaticamente
+%
+% C) WebSocket Protocol (0.5 pagine):
+% - COSA: RFC 6455, protocollo full-duplex su TCP, handshake HTTP upgrade
+% - Caratteristiche: bidirezionale, persistent, low-overhead (2-14 byte header), low-latency (<10ms)
+% - PERCHÉ: vs HTTP polling (latency 1-5sec, overhead alto, server load)
+%
+% Tabella 3.3: Polling vs WebSocket (COMPATTA)
+% | Aspetto     | Short Polling | WebSocket  |
+% |-------------|---------------|------------|
+% | Latency     | 1-5 sec       | <10 ms     |
+% | Overhead    | Alto          | Minimo     |
+% | Server Load | Alto          | Basso      |
+% | Scalabilità | Bassa         | Alta       |
+%
+% - Limitazioni WebSocket: no fallback automatico, riconnessione manuale, no typed messages
+% - → SignalR risolve queste limitazioni (vedi 3.3.2)
+%
+% Elementi visivi:
+% - Tabella 3.3: Polling vs WebSocket (4×2)
+%
+% Pagine stimate: 1.5
 
 %----------------------------------------------------------------------------------------
-\subsection{SignalR Client: Comunicazione Real-Time}
-\label{subsec:signalr-client}
+\subsection{SignalR: Framework Real-Time}
+\label{subsec:signalr-framework}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - Package Microsoft.AspNetCore.SignalR.Client per connessione a hub SignalR
-% - HubConnection: rappresenta connessione persistente WebSocket
-% - Configurazione client:
-%   * HubConnectionBuilder per setup
-%   * withUrl: endpoint hub e opzioni (access token factory)
-%   * withAutomaticReconnect: backoff esponenziale per riconnessione
-%   * configureLogging: level logging per debugging
-% - Gestione eventi:
-%   * On(): registrazione handler per metodi hub
-%   * InvokeAsync(): chiamata metodi server-side
-%   * OnConnected, OnDisconnected, OnReconnecting callbacks
-% - Implementazione SignalRService nel progetto come wrapper
-% - Thread-safety: lock per gestione handler concorrenti
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippet connection setup, diagramma lifecycle connessione
+% Contenuti da sviluppare (3 pagine - RIDOTTA da 4.5):
+%
+% A) COSA è SignalR (0.8 pagine):
+% - Libreria ASP.NET Core per comunicazione real-time client-server
+% - Astrazione high-level su WebSocket con fallback automatico
+% - Componenti principali:
+%   * **Transport layer**: WebSocket (preferito) → Server-Sent Events → Long Polling (fallback)
+%   * **Hub pattern**: Clients.All.Method() (broadcast), Clients.Client(id).Method() (unicast)
+%   * **Strongly-typed hubs**: interfaccia IClient, compile-time safety
+%   * **Auto-reconnection**: retry con backoff [0, 2, 5, 10] secondi
+%   * **Lifecycle events**: OnConnectedAsync, OnDisconnectedAsync
+%
+% B) PERCHÉ SignalR (0.8 pagine):
+%
+% Tabella 3.4: WebSocket vs SignalR (COMPATTA)
+% | Aspetto         | WebSocket Raw       | SignalR                 |
+% |-----------------|---------------------|-------------------------|
+% | Fallback        | Manuale             | Automatico (SSE → LP)   |
+% | Riconnessione   | Custom              | Automatica backoff      |
+% | Typed messages  | Serializzazione man | Strongly-typed methods  |
+% | Broadcasting    | Loop manuale        | Clients.All.Method()    |
+% | Complessità     | 300-500 lines       | 20-30 lines             |
+%
+% Vantaggi SignalR:
+% - **Produttività**: 90% meno codice boilerplate
+% - **Affidabilità**: auto-reconnect, fallback transport
+% - **Developer experience**: type-safety, IntelliSense
+%
+% C) Ruolo nel progetto (1 pagina):
+%
+% **IwineHub**: SignalR Hub esterno pre-esistente
+% - Bridging MCP Server ↔ Configurator3D
+% - Funzionalità: routing messaggi (SendMessage), broadcasting, ConnectionId exchange
+% - Hosting: Kestrel porta 7193, JWT authentication, CORS configurato
+%
+% **SignalR Client .NET**: usato da MCP Server
+% - Package: Microsoft.AspNetCore.SignalR.Client
+% - API: StartAsync(), On<T>(event, handler), InvokeAsync(method, args)
+% - Auto-reconnect: [0, 2, 5, 10] secondi backoff
+%
+% **SignalR Client Browser**: usato da Configurator3D
+% - Package npm: @microsoft/signalr v8.x
+% - Handlers: on("open", ...), on("create", ...) per comandi MCP
+% - ACK pattern: invoke("SendAck", commandId) conferma elaborazione
+%
+% **Dual-Channel Pattern**: REST + SignalR complementari
+% - REST: operazioni CRUD pesanti
+% - SignalR: notifiche real-time leggere
+% - Vantaggi: separation of concerns, resilienza
+%
+% D) Caratteristiche determinanti (0.4 pagine):
+% - **Bidirezionalità real-time**: latency <10ms vs polling 1-5 sec
+% - **Affidabilità**: auto-reconnect per sessioni lunghe
+% - **Fallback transport**: 100% compatibility in ambienti restrittivi
+% - **Ecosystem maturity**: Microsoft production-ready, LTS support
+%
+% Elementi visivi:
+% - Tabella 3.4: WebSocket vs SignalR (5×3)
+% - Diagramma 3.4: Dual-Channel pattern (MCP → REST + SignalR → Configurator)
+%
+% Pagine stimate: 3
 
 %----------------------------------------------------------------------------------------
-\subsection{System.Text.Json: Serializzazione JSON}
-\label{subsec:system-text-json}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Serializer JSON nativo .NET (introdotto .NET Core 3.0)
-% - Confronto con Newtonsoft.Json:
-%   * Performance: 2-3x più veloce, 50% meno allocazioni memoria
-%   * API minimalista vs ricchissima
-%   * Integrazione nativa ASP.NET Core
-%   * Supporto Microsoft garantito
-% - Motivazione scelta per progetto: performance critica per messaggi MCP/SignalR
-% - Configurazione JsonSerializerOptions:
-%   * PropertyNamingPolicy: camelCase per JSON API-friendly
-%   * DefaultIgnoreCondition: ignora null per payload compatto
-%   * PropertyNameCaseInsensitive: parsing robusto
-% - Attributi customizzazione: [JsonPropertyName], [JsonIgnore], [JsonConverter]
-% - Gestione errori: JsonException handling
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Tabella confronto performance, code snippet configurazione
-
-%----------------------------------------------------------------------------------------
-\subsection{JSON-RPC 2.0 nel contesto MCP}
-\label{subsec:json-rpc-mcp}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Protocollo JSON-RPC 2.0: standard lightweight per RPC su JSON
-% - Struttura messaggi:
-%   * Request: { jsonrpc, method, params, id }
-%   * Response success: { jsonrpc, result, id }
-%   * Response error: { jsonrpc, error: { code, message }, id }
-%   * Notification: { jsonrpc, method, params } (no id, no response)
-% - Utilizzo in MCP:
-%   * tools/call: invocazione tool da AI
-%   * resources/read: fetch contenuto risorsa
-%   * prompts/get: template prompt
-%   * sampling/createMessage: richiesta inferenza LLM
-% - MCP SDK gestisce automaticamente serializzazione/deserializzazione
-% - Vantaggi JSON-RPC: stateless, bidirezionale, semplice, estensibile
-% - Validazione schema: JSON Schema per type-safety
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Esempi messaggi JSON-RPC, sequence diagram tool invocation
-
-%----------------------------------------------------------------------------------------
-\section{Architettura e Pattern}
-\label{sec:architettura-pattern}
-%----------------------------------------------------------------------------------------
-
-% Questa sezione approfondisce pattern architetturali e framework utilities .NET
-
-%----------------------------------------------------------------------------------------
-\subsection{Dependency Injection (Microsoft.Extensions.DI)}
-\label{subsec:dependency-injection}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Principio Inversion of Control (IoC) e Dependency Injection
-% - Container DI nativo ASP.NET Core (Microsoft.Extensions.DependencyInjection)
-% - Service Lifetime:
-%   * Transient: nuova istanza ogni request
-%   * Scoped: istanza per scope (HTTP request in web app)
-%   * Singleton: unica istanza per lifetime applicazione
-% - Utilizzo nel progetto:
-%   * MarkunoApiTools: Singleton (stato globale _authToken)
-%   * SignalRService: Singleton (connessione persistente)
-%   * HttpClient: Transient via IHttpClientFactory
-%   * ILogger<T>: Singleton (thread-safe)
-% - Vantaggi DI:
-%   * Testabilità: mock dipendenze per unit test
-%   * Manutenibilità: cambio implementazione senza modificare consumer
-%   * Configurabilità: registrazione centralizzata in Program.cs
-% - Captive Dependency problem: Singleton che dipende da Scoped → memory leak
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma lifetime, code snippet registrazione servizi
-
-%----------------------------------------------------------------------------------------
-\subsection{Configuration Management (IConfiguration)}
-\label{subsec:configuration-management}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Sistema configurazione ASP.NET Core: Microsoft.Extensions.Configuration
-% - Fonti configurazione (ordine priorità):
-%   * appsettings.json: configurazione base
-%   * appsettings.{Environment}.json: override per ambiente
-%   * Environment variables: override per deployment
-%   * User secrets: sviluppo locale (fuori repo)
-%   * Command line arguments: override runtime
-%   * Azure Key Vault: secrets produzione
-% - Accesso configurazione:
-%   * IConfiguration injection: builder.Configuration["key"]
-%   * Options pattern: IOptions<T> per strongly-typed settings
-% - Utilizzo nel progetto:
-%   * AppSettings.json: BaseUrl, MarkunoCredentials, SignalRConfig
-%   * Secrets management: credenziali mai hardcoded
-%   * Environment-specific: Development vs Production
-% - Best practices: externalizzare tutto, secrets encryption
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma fonti configurazione, code snippet IConfiguration
-
-%----------------------------------------------------------------------------------------
-\subsection{Logging Strutturato (ILogger<T>)}
-\label{subsec:logging-strutturato}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Framework logging ASP.NET Core: Microsoft.Extensions.Logging
-% - ILogger<T>: interfaccia generica per logging tipizzato
-% - Log levels: Trace, Debug, Information, Warning, Error, Critical
-% - Logging strutturato:
-%   * Template con placeholders: "Tool {ToolName} invoked"
-%   * Parametri indicizzati per searchability
-%   * Structured data per analytics
-% - Providers/Sinks:
-%   * Console: output console per sviluppo/Docker
-%   * File: Serilog per persistence su disco
-%   * Application Insights: telemetria Azure per produzione
-% - Log scopes: correlazione operazioni complesse (RequestId)
-% - Utilizzo nel progetto:
-%   * Log ogni tool invocation con parametri
-%   * Log errori HTTP con StatusCode e messaggio
-%   * Log lifecycle SignalR (connected, disconnected, reconnecting)
-% - Filtering: log level diversi per ambiente (Debug in dev, Info in prod)
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Tabella log levels, code snippet logging strutturato
-
-%----------------------------------------------------------------------------------------
-\subsection{Async/Await Pattern}
-\label{subsec:async-await}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Programmazione asincrona in C#: async/await keywords
-% - Task Parallel Library (TPL): Task<T> per operazioni asincrone
-% - Vantaggi async/await:
-%   * Non-blocking I/O: thread non bloccato durante wait
-%   * Scalabilità: più richieste concorrenti con meno thread
-%   * Semplicità: codice sequenziale invece di callback hell
-% - Utilizzo nel progetto (tutti tool sono async):
-%   * Chiamate HTTP: await _httpClient.GetAsync()
-%   * Chiamate SignalR: await _hubConnection.InvokeAsync()
-%   * Tool MCP: async Task<object> GetProjectsAsync()
-% - Best practices:
-%   * ConfigureAwait(false) per library code
-%   * CancellationToken per operazioni cancellabili
-%   * Evitare async void (solo event handlers)
-%   * ValueTask<T> per hot path (performance)
-% - Pitfalls: deadlock con .Result, async all the way
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma thread execution async vs sync, code snippet
-
-%----------------------------------------------------------------------------------------
-\section{Frontend e Client Stack}
-\label{sec:frontend-client-stack}
-%----------------------------------------------------------------------------------------
-
-% Questa sezione approfondisce tecnologie client-side per Configurator3D
-
-%----------------------------------------------------------------------------------------
-\subsection{TypeScript: Type-Safety Client-Side}
-\label{subsec:typescript}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - TypeScript: superset JavaScript con type-checking statico
-% - Motivazioni scelta:
-%   * Type-safety: errori compile-time invece di runtime
-%   * Refactoring sicuro: rename/move con propagazione
-%   * IntelliSense: autocomplete per oggetti complessi
-%   * Documentazione implicita: tipi = contratto
-%   * Integrazione tooling: VS Code, ESLint, Prettier
-% - Features utilizzate:
-%   * Interfaces: definizione tipi Message, CommandMessage, EventMessage
-%   * Union types: type: "command" | "event" | "ack"
-%   * Type guards: runtime validation con narrowing
-%   * Generics: funzioni riusabili type-safe
-% - Compilazione: TypeScript → JavaScript (ES6/ESNext)
-% - Integrazione con SignalR SDK: @microsoft/signalr typed
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippet definizione tipi, confronto JS vs TS
-
-%----------------------------------------------------------------------------------------
-\subsection{@microsoft/signalr SDK}
-\label{subsec:signalr-sdk-client}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Package npm @microsoft/signalr per client browser
-% - Setup connessione:
-%   * HubConnectionBuilder: configurazione endpoint, transport, logging
-%   * withUrl: URL hub + opzioni (accessTokenFactory per JWT)
-%   * withAutomaticReconnect: backoff esponenziale [0, 2000, 5000, 10000]
-%   * build(): crea HubConnection
-% - API connessione:
-%   * start(): avvia connessione (async)
-%   * stop(): chiude connessione
-%   * connectionId: ID univoco assegnato da server
-% - Registrazione handlers:
-%   * on(methodName, handler): callback per metodi invocati da server
-%   * invoke(methodName, ...args): chiamata metodo server con risposta
-%   * send(methodName, ...args): fire-and-forget
-% - Eventi lifecycle:
-%   * onclose: disconnessione (volontaria o errore)
-%   * onreconnecting: tentativo riconnessione in corso
-%   * onreconnected: riconnessione riuscita con nuovo connectionId
-% - Utilizzo nel Configurator3D:
-%   * Ricezione comandi da MCP Server (open, create, list)
-%   * Invio ACK per conferma ricezione
-%   * Gestione UI durante riconnessione
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Code snippet setup connessione, diagramma eventi lifecycle
-
-%----------------------------------------------------------------------------------------
-\subsection{Configurator3D: Integrazione}
-\label{subsec:configurator3d-integration}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - Panoramica applicazione Configurator3D (esistente)
-% - Stack 3D rendering: Three.js / Babylon.js / WebGL
-% - Modifiche per integrazione MCP:
-%   * Aggiunta SignalR client per comunicazione real-time
-%   * Handlers per comandi MCP: open, create, list
-%   * Invio ACK per conferma elaborazione
-%   * Sincronizzazione stato 3D con backend MarkunoAPI
-% - Pattern Observer: registrazione callback per eventi SignalR
-% - Gestione errori: retry connessione, fallback graceful
-% - UI feedback: indicatore connessione, messaggi stato
-% - Deployment: bundle TypeScript → JavaScript, hosting statico
-% 
-% Pagine stimate: 1-2
-% Elementi visivi: Screenshot UI configurator, diagramma integrazione
-
-%----------------------------------------------------------------------------------------
-\section{Sicurezza}
+\section{Sicurezza Applicativa}
 \label{sec:sicurezza}
 %----------------------------------------------------------------------------------------
 
-% Questa sezione approfondisce aspetti sicurezza del sistema
+% FOCUS: JWT autenticazione stateless, CORS, HTTPS
+% Approccio: DETTAGLIATO per JWT, COMPATTO per CORS/HTTPS
 
 %----------------------------------------------------------------------------------------
-\subsection{JWT Bearer Authentication}
-\label{subsec:jwt-bearer-auth}
+\subsection{JWT: Autenticazione Stateless}
+\label{subsec:jwt}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - JSON Web Token (JWT): standard RFC 7519 per token accesso
-% - Struttura JWT: header.payload.signature (Base64Url encoded)
-%   * Header: algoritmo firma (HS256, RS256)
-%   * Payload: claims (sub, name, exp, iat, custom)
-%   * Signature: HMAC/RSA per verificare integrità
-% - Flusso autenticazione nel progetto:
-%   1. Login: POST /api/login con credenziali → riceve JWT
-%   2. Storage: MCP Server salva token in _authToken
-%   3. Uso: header "Authorization: Bearer <token>" per ogni richiesta REST
-%   4. Validazione: MarkunoAPI verifica firma e claims (exp)
-% - Vantaggi JWT:
-%   * Stateless: server non mantiene sessioni
-%   * Self-contained: claims nel token
-%   * Scalabile: no shared state tra istanze
-%   * Cross-domain: CORS-friendly
-% - Security considerations:
-%   * Expiration time: 15-30 minuti tipicamente
-%   * HTTPS only: mai trasmettere su HTTP
-%   * Secret protection: chiave firma robusta e segreta
-%   * Token refresh: refresh token per sessioni lunghe
-%   * Revocation: JWT non revocabili (workaround: blacklist, short exp)
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma struttura JWT, sequence diagram autenticazione
+% Contenuti da sviluppare (1.5 pagine - RIDOTTA da 3):
+%
+% A) COSA è JWT (0.6 pagine):
+% - RFC 7519: JSON Web Token per access token stateless
+% - Struttura: header.payload.signature (3 parti Base64Url encoded)
+%   * Header: { "alg": "HS256", "typ": "JWT" }
+%   * Payload: { "sub": "user123", "exp": 1735689600, "name": "..." } (claims)
+%   * Signature: HMACSHA256(header + payload, secret_key)
+% - Verifica: server ricalcola signature, check exp claim
+%
+% B) PERCHÉ JWT (0.6 pagine):
+%
+% Tabella 3.5: Session vs JWT (COMPATTA)
+% | Aspetto      | Session-based     | JWT                |
+% |--------------|-------------------|--------------------|
+% | State        | Stateful          | Stateless          |
+% | Storage      | Server memory/DB  | Client-side        |
+% | Scalability  | Sticky sessions   | Horizontal scaling |
+% | CSRF         | Vulnerable        | Immune             |
+% | Cross-domain | Problematic       | Easy               |
+%
+% Vantaggi JWT:
+% - **Stateless**: scalabilità orizzontale illimitata
+% - **Self-contained**: no database lookup per ogni request
+% - **Cross-domain**: CORS-friendly, no cookie restrictions
+%
+% C) Ruolo progetto (0.3 pagine):
+% - MarkunoAPI emette JWT al login: POST /api/login → { Token }
+% - MCP Server invia JWT in Authorization header: "Bearer <token>"
+% - MarkunoAPI valida signature e exp claims
+%
+% Security considerations (breve):
+% - HTTPS enforcement, secret protection, short expiration (15-30 min)
+%
+% Elementi visivi:
+% - Tabella 3.5: Session vs JWT (5×3)
+% - Diagramma 3.5: JWT flow (Login → Token → Request → Validate)
+%
+% Pagine stimate: 1.5
 
 %----------------------------------------------------------------------------------------
-\subsection{HTTPS/WSS: Transport Security}
-\label{subsec:https-wss}
+\subsection{CORS e Transport Security}
+\label{subsec:cors-https}
 %----------------------------------------------------------------------------------------
 
-% Contenuti da sviluppare:
-% - HTTPS: HTTP su TLS 1.2/1.3 per cifratura trasporto
-% - Enforcing HTTPS in ASP.NET Core:
-%   * UseHttpsRedirection: redirect automatico HTTP → HTTPS
-%   * UseHsts: HTTP Strict Transport Security header (max-age=31536000)
-% - Certificati TLS:
-%   * Sviluppo: self-signed con dotnet dev-certs https
-%   * Produzione: Let's Encrypt o commercial CA
-%   * Azure: certificati managed da Azure App Service
-% - WSS (WebSocket Secure): WebSocket su TLS
-%   * Upgrade da HTTPS: negotiate → ws upgrade → TLS handshake
-%   * Tutti messaggi SignalR cifrati end-to-end
-% - Vantaggi transport security:
-%   * Confidenzialità: messaggi cifrati (MITM protection)
-%   * Integrità: TLS garantisce no tampering
-%   * Autenticazione: certificato server verifica identità
-% - Best practices:
-%   * TLS 1.2 minimum (1.3 preferred)
-%   * Strong cipher suites
-%   * Certificate pinning per app mobile
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma TLS handshake, tabella cipher suites
-
-%----------------------------------------------------------------------------------------
-\subsection{CORS Configuration}
-\label{subsec:cors-configuration}
-%----------------------------------------------------------------------------------------
-
-% Contenuti da sviluppare:
-% - CORS (Cross-Origin Resource Sharing): meccanismo sicurezza browser
-% - Same-Origin Policy: browser blocca richieste cross-domain
-% - Problema nel progetto:
-%   * Configurator3D (https://configurator.markuno.com)
-%   * SignalR Hub (https://signalr.markuno.com)
-%   * Domini diversi → bloccato da CORS
+% Contenuti da sviluppare (1 pagina - UNISCE CORS + HTTPS):
+%
+% A) CORS: Cross-Origin Resource Sharing (0.6 pagine):
+% - Problema: Same-Origin Policy browser blocca requests cross-domain
+% - Scenario progetto:
+%   * Configurator3D: https://configurator.markuno.com
+%   * SignalR Hub: https://api.markuno.com:7193 (porta diversa)
+%   * Browser blocca WebSocket → serve CORS
 % - Soluzione: server invia header Access-Control-*
-%   * Access-Control-Allow-Origin: whitelist origins
-%   * Access-Control-Allow-Methods: GET, POST, etc.
-%   * Access-Control-Allow-Headers: Authorization, Content-Type
-%   * Access-Control-Allow-Credentials: true (per SignalR)
-% - Configurazione ASP.NET Core:
-%   * AddCors: definizione policy (Development vs Production)
-%   * UseCors: applicazione middleware
-%   * Policy Production: whitelist explicit origins
-%   * Policy Development: AllowAnyOrigin (solo dev!)
-% - Preflight request: OPTIONS request per validazione permessi
-% - CORS per SignalR:
-%   * AllowCredentials required
-%   * Cannot use AllowAnyOrigin with credentials
-% - Security best practices:
-%   * Never AllowAnyOrigin in produzione
-%   * Least privilege: only necessary methods/headers
-%   * HTTPS required con credentials
-%   * Validate input server-side (CORS è controllo client)
-% 
-% Pagine stimate: 2-3
-% Elementi visivi: Diagramma preflight request, code snippet CORS config
+%   * Access-Control-Allow-Origin: origin autorizzato
+%   * Access-Control-Allow-Credentials: true (REQUIRED per SignalR + auth)
+% - Preflight request: browser OPTIONS prima request effettiva
+% - Ruolo progetto: IwineHub configurato CORS per Configurator3D origin
+%
+% B) HTTPS/WSS: Transport Layer Security (0.4 pagine):
+% - HTTPS: HTTP over TLS, WSS: WebSocket Secure over TLS
+% - TLS 1.3: encryption end-to-end, AES-256-GCM
+% - PERCHÉ: confidenzialità (JWT encrypted), integrità, autenticità
+% - Ruolo progetto:
+%   * HTTPS: tutte chiamate REST MarkunoAPI
+%   * WSS: SignalR WebSocket
+%   * Sviluppo: self-signed certificate, Produzione: Let's Encrypt
+% - Senza TLS: JWT intercettabile (MITM attack)
+%
+% Elementi visivi:
+% - Diagramma 3.6: CORS preflight flow (OPTIONS → headers → request)
+%
+% Pagine stimate: 1
 
+%----------------------------------------------------------------------------------------
+\section{Integrazione Frontend}
+\label{sec:frontend}
+%----------------------------------------------------------------------------------------
 
+% FOCUS: TypeScript e SignalR client browser
+% Approccio: COMPATTO, essenziale
+
+%----------------------------------------------------------------------------------------
+\subsection{TypeScript: Type-Safety JavaScript}
+\label{subsec:typescript}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare (0.7 pagine):
+%
+% A) COSA è TypeScript (0.3 pagine):
+% - Superset JavaScript con type system statico
+% - Microsoft, open-source, versione 5.x (2023)
+% - Compilation: TypeScript → transpiler tsc → JavaScript (ES6)
+%
+% B) PERCHÉ TypeScript (0.4 pagine):
+%
+% Tabella 3.6: JavaScript vs TypeScript (COMPATTA)
+% | Aspetto      | JavaScript  | TypeScript         |
+% |--------------|-------------|--------------------|
+% | Type check   | Runtime     | Compile-time       |
+% | Errors       | Production  | Development        |
+% | IntelliSense | Limited     | Full autocomplete  |
+% | Refactoring  | Risky       | Safe (type-checked)|
+%
+% Vantaggi progetto:
+% - **Compile-time errors**: catch typo method names BEFORE runtime
+% - **IntelliSense**: autocomplete SignalR methods
+% - **Type safety**: message structure garantita
+%
+% Ruolo progetto:
+% - Configurator3D scritto in TypeScript 5.x
+% - SignalR client: import @microsoft/signalr, type-safe API
+%
+% Pagine stimate: 0.7
+
+%----------------------------------------------------------------------------------------
+\subsection{SignalR Client Browser}
+\label{subsec:signalr-browser}
+%----------------------------------------------------------------------------------------
+
+% Contenuti da sviluppare (0.8 pagine):
+%
+% A) COSA è @microsoft/signalr (0.3 pagine):
+% - Package npm: client SignalR per browser JavaScript/TypeScript
+% - Versione 8.x (aligned con SignalR server 8.0)
+% - API: HubConnectionBuilder, on(), invoke(), start()
+%
+% B) Configurazione (0.3 pagine):
+% - HubConnectionBuilder: withUrl(), withAutomaticReconnect([0, 2, 5, 10]), configureLogging()
+% - Event handlers: on("GetMessage", handler), on("GetConnectionId", handler)
+% - Server invocation: invoke("SendMessage", receiverId, message)
+% - Lifecycle: start(), stop(), onclose(callback)
+%
+% C) Ruolo progetto (0.2 pagine):
+% - Handlers comandi MCP: on("open", ...), on("create", ...), on("list", ...), on("add", ...)
+% - ACK pattern: invoke("SendAck", commandId, "success")
+% - UI feedback: connection status indicator (verde/giallo/rosso)
+% - Gestione errori: auto-reconnect, fallback Long Polling
+%
+% Elementi visivi:
+% - Listing 3.6: Esempio HubConnectionBuilder setup (pseudo-code)
+%
+% Pagine stimate: 0.8
+
+%----------------------------------------------------------------------------------------
+% FINE CAPITOLO 3: Stack Tecnologico
+% Pagine totali stimate: 2 + 3.5 + 4.5 + 2.5 + 1.5 = ~14 pagine
 %----------------------------------------------------------------------------------------
 \chapter{Progettazione del Sistema}
 \label{chap:progettazione}
@@ -2915,7 +2303,7 @@ Questo lavoro affronta le sfide sopra attraverso:
 % Pagine stimate: 3-4
 
 %----------------------------------------------------------------------------------------
-\section{Implementazione IwineHub (SignalR Server)}
+\section{Implementazione Hub (SignalR Server)}
 \label{sec:implementazione-iwine-hub}
 %----------------------------------------------------------------------------------------
 
@@ -3400,373 +2788,8 @@ Questo lavoro affronta le sfide sopra attraverso:
 % Pagine stimate: 3-4
 
 %----------------------------------------------------------------------------------------
-\section{Testing e Debugging}
-\label{sec:testing-debugging}
-%----------------------------------------------------------------------------------------
 
-% UNIT TESTING:
-%
-% ```csharp
-% [TestClass]
-% public class MarkunoApiToolsTests
-% {
-%     private Mock<HttpClient> _httpClientMock;
-%     private Mock<SignalRService> _signalRServiceMock;
-%     private Mock<ILogger<MarkunoApiTools>> _loggerMock;
-%     private Mock<IConfiguration> _configMock;
-%     private MarkunoApiTools _tools;
-%     
-%     [TestInitialize]
-%     public void Setup()
-%     {
-%         _httpClientMock = new Mock<HttpClient>();
-%         _signalRServiceMock = new Mock<SignalRService>();
-%         _loggerMock = new Mock<ILogger<MarkunoApiTools>>();
-%         _configMock = new Mock<IConfiguration>();
-%         
-%         _tools = new MarkunoApiTools(
-%             _httpClientMock.Object,
-%             _signalRServiceMock.Object,
-%             _loggerMock.Object,
-%             _configMock.Object
-%         );
-%     }
-%     
-%     [TestMethod]
-%     public async Task Login_WithValidCredentials_ReturnsSuccess()
-%     {
-%         // Arrange
-%         var loginResponse = new LoginResponse {
-%             Data = new LoginData {
-%                 User = new User { 
-%                     Token = "test-token",
-%                     Name = "testuser"
-%                 }
-%             }
-%         };
-%         
-%         _httpClientMock.Setup(x => x.PostAsJsonAsync(
-%             It.IsAny<string>(), 
-%             It.IsAny<object>()
-%         )).ReturnsAsync(new HttpResponseMessage {
-%             StatusCode = HttpStatusCode.OK,
-%             Content = new StringContent(JsonSerializer.Serialize(loginResponse))
-%         });
-%         
-%         // Act
-%         var result = await _tools.Login("testuser", "password");
-%         var resultObj = JsonSerializer.Deserialize<dynamic>(result);
-%         
-%         // Assert
-%         Assert.IsTrue(resultObj.success);
-%         Assert.AreEqual("testuser", resultObj.username);
-%     }
-% }
-% ```
-%
-% INTEGRATION TESTING:
-%
-% ```csharp
-% [TestClass]
-% public class SignalRIntegrationTests
-% {
-%     private WebApplicationFactory<Program> _factory;
-%     private HubConnection _clientConnection;
-%     
-%     [TestInitialize]
-%     public async Task Setup()
-%     {
-%         _factory = new WebApplicationFactory<Program>();
-%         var client = _factory.CreateClient();
-%         
-%         _clientConnection = new HubConnectionBuilder()
-%             .WithUrl($"{client.BaseAddress}configuratorHub", options => {
-%                 options.HttpMessageHandlerFactory = _ => _factory.Server.CreateHandler();
-%             })
-%             .Build();
-%         
-%         await _clientConnection.StartAsync();
-%     }
-%     
-%     [TestMethod]
-%     public async Task SendMessage_Broadcast_AllClientsReceive()
-%     {
-%         // Arrange
-%         var receivedMessages = new List<Message>();
-%         _clientConnection.On<Message>("GetMessage", msg => {
-%             receivedMessages.Add(msg);
-%         });
-%         
-%         var testMessage = new Message {
-%             Action = "test",
-%             Route = "/broadcast"
-%         };
-%         
-%         // Act
-%         await _clientConnection.InvokeAsync("SendMessage", testMessage);
-%         await Task.Delay(100); // Attendi delivery
-%         
-%         // Assert
-%         Assert.AreEqual(1, receivedMessages.Count);
-%         Assert.AreEqual("test", receivedMessages[0].Action);
-%     }
-% }
-% ```
-%
-% DEBUGGING SIGNALR:
-%
-% Configurazione logging dettagliato:
-% ```json
-% {
-%   "Logging": {
-%     "LogLevel": {
-%       "Microsoft.AspNetCore.SignalR": "Trace",
-%       "Microsoft.AspNetCore.Http.Connections": "Trace"
-%     }
-%   }
-% }
-% ```
-%
-% Strumenti debugging:
-% - Browser DevTools: Network tab per WebSocket frames
-% - Fiddler/Postman: intercettazione traffico HTTP/WS
-% - SignalR Tracing: log dettagliati protocol
-% - VS Code Debugger: breakpoint in hub methods
-%
-% LOGGING STRUTTURATO:
-%
-% ```csharp
-% _logger.LogInformation(
-%     "Tool {ToolName} invocato da {User} con {ParamCount} parametri",
-%     "AddArticle",
-%     _currentUser?.Name,
-%     parameters.Count
-% );
-%
-% _logger.LogError(
-%     exception,
-%     "Errore processing messaggio {MessageId} da {Sender}",
-%     message.Id,
-%     senderId
-% );
-% ```
-%
-% PERFORMANCE MONITORING:
-% - Application Insights per telemetria
-% - Custom metrics per tool invocation times
-% - SignalR metrics: connection count, message rate
-% - Health checks endpoint: /health
-%
-% Concetti chiave:
-% - Unit testing: mocking dependencies
-% - Integration testing: WebApplicationFactory
-% - Structured logging: semantic log messages
-% - Debugging tools: DevTools, Fiddler, tracing
-%
-% Pagine stimate: 3-4
-
-%----------------------------------------------------------------------------------------
-\section{Deployment e Produzione}
-\label{sec:deployment-produzione}
-%----------------------------------------------------------------------------------------
-
-% CONTAINERIZATION CON DOCKER:
-%
-% Dockerfile per MCP Server:
-% ```dockerfile
-% FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-% WORKDIR /app
-% EXPOSE 80
-% EXPOSE 443
-%
-% FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-% WORKDIR /src
-% COPY ["MarkunoApiTools/MarkunoApiTools.csproj", "MarkunoApiTools/"]
-% RUN dotnet restore "MarkunoApiTools/MarkunoApiTools.csproj"
-% COPY . .
-% WORKDIR "/src/MarkunoApiTools"
-% RUN dotnet build "MarkunoApiTools.csproj" -c Release -o /app/build
-%
-% FROM build AS publish
-% RUN dotnet publish "MarkunoApiTools.csproj" -c Release -o /app/publish
-%
-% FROM base AS final
-% WORKDIR /app
-% COPY --from=publish /app/publish .
-% ENTRYPOINT ["dotnet", "MarkunoApiTools.dll"]
-% ```
-%
-% docker-compose.yml:
-% ```yaml
-% version: '3.8'
-% services:
-%   signalr-server:
-%     build:
-%       context: ./IwineSignalRServer
-%       dockerfile: Dockerfile
-%     ports:
-%       - "7193:80"
-%     environment:
-%       - ASPNETCORE_ENVIRONMENT=Production
-%       - ASPNETCORE_URLS=http://+:80
-%     networks:
-%       - markuno-network
-%   
-%   mcp-server:
-%     build:
-%       context: ./MarkunoApiTools
-%       dockerfile: Dockerfile
-%     depends_on:
-%       - signalr-server
-%     environment:
-%       - SignalR__HubUrl=http://signalr-server:80
-%     networks:
-%       - markuno-network
-%
-% networks:
-%   markuno-network:
-%     driver: bridge
-% ```
-%
-% DEPLOYMENT SU AZURE:
-%
-% Azure App Service per SignalR Server:
-% - Scala automaticamente con load balancer
-% - Azure SignalR Service per scalabilità orizzontale
-% - Sticky sessions per mantenere connessioni
-%
-% Azure Container Instances per MCP Server:
-% - Lightweight, pay-per-second
-% - Networking virtuale per comunicazione privata
-% - Managed identity per secrets
-%
-% CI/CD PIPELINE (GitHub Actions):
-%
-% ```yaml
-% name: Deploy to Production
-%
-% on:
-%   push:
-%     branches: [ main ]
-%
-% jobs:
-%   build-and-deploy:
-%     runs-on: ubuntu-latest
-%     steps:
-%       - uses: actions/checkout@v2
-%       
-%       - name: Setup .NET
-%         uses: actions/setup-dotnet@v1
-%         with:
-%           dotnet-version: '8.0.x'
-%       
-%       - name: Restore dependencies
-%         run: dotnet restore
-%       
-%       - name: Build
-%         run: dotnet build --configuration Release
-%       
-%       - name: Test
-%         run: dotnet test --no-build --verbosity normal
-%       
-%       - name: Publish
-%         run: dotnet publish -c Release -o ./publish
-%       
-%       - name: Deploy to Azure App Service
-%         uses: azure/webapps-deploy@v2
-%         with:
-%           app-name: 'markuno-signalr'
-%           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-%           package: ./publish
-% ```
-%
-% MONITORAGGIO PRODUZIONE:
-% - Application Insights: telemetria applicativa
-% - Azure Monitor: metriche infrastruttura
-% - Log Analytics: query centralizzate su log
-% - Alert rules: notifiche errori/performance
-%
-% SCALABILITÀ:
-% - Azure SignalR Service: backplane per scale-out
-% - Redis backplane alternativa
-% - Load balancer con sticky sessions
-% - Horizontal scaling: multiple istanze
-%
-% HIGH AVAILABILITY:
-% - Multiple regions deployment
-% - Health check endpoints
-% - Auto-restart on failure
-% - Backup SignalR server fallback
-%
-% Concetti chiave:
-% - Containerization: Docker per portabilità
-% - Orchestration: docker-compose per multi-container
-% - CI/CD: automazione deployment
-% - Cloud services: Azure PaaS per scalabilità
-% - Monitoring: telemetria e alerting
-%
-% Pagine stimate: 3-4
-
-%----------------------------------------------------------------------------------------
-\section{Sintesi dell'Implementazione}
-\label{sec:sintesi-implementazione}
-%----------------------------------------------------------------------------------------
-
-% Riepilogo finale del capitolo:
-%
-% COMPONENTI IMPLEMENTATI:
-% - MCP Server (MarkunoApiTools): 15+ tool implementati
-% - SignalR Service: client connection con retry logic
-% - IwineHub: server SignalR con routing messaggi
-% - Configurator3D Client: integrazione TypeScript
-% - Configuration system: appsettings multi-environment
-% - Authentication: JWT bearer token management
-% - Logging: strutturato con ILogger
-% - Testing: unit + integration tests
-%
-% TECNOLOGIE UTILIZZATE:
-% - .NET 8.0 / C# 12
-% - ASP.NET Core SignalR
-% - TypeScript 5.x
-% - System.Text.Json
-% - xUnit / MSTest
-% - Docker / Azure
-%
-% LINEE DI CODICE:
-% - MCP Server: ~2000 LOC
-% - SignalR Service: ~500 LOC
-% - IwineHub: ~300 LOC
-% - Client TypeScript: ~800 LOC
-% - Tests: ~1000 LOC
-% - Totale: ~4600 LOC
-%
-% PATTERN IMPLEMENTATIVI:
-% - Dependency Injection
-% - Repository Pattern
-% - Observer Pattern
-% - Command Pattern
-% - Singleton Pattern
-% - Builder Pattern
-% - Async/Await everywhere
-%
-% SFIDE TECNICHE RISOLTE:
-% - Riconnessione automatica SignalR con backoff
-% - Multiple endpoint fallback per resilienza
-% - Thread-safe state management per payload caching
-% - JWT token refresh automatico
-% - Certificati self-signed in sviluppo
-% - CORS configuration per cross-origin
-% - Serializzazione/deserializzazione JSON complessa
-%
-% METRICHE PRESTAZIONI:
-% - Latenza media tool invocation: <100ms
-% - Latenza SignalR round-trip: <50ms
-% - Throughput messaggi: ~1000 msg/sec
-% - Concurrent connections supportate: 500+
-%
-% Pagine totali stimate: 35-45 pagine
-
-%----------------------------------------------------------------------------------------
+\chapter{Conclusioni e sviluppi futuri}
 % BIBLIOGRAPHY
 %----------------------------------------------------------------------------------------
 
