@@ -1,11 +1,17 @@
 \documentclass[12pt,a4paper,openright,twoside]{book}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{disi-thesis}
 \usepackage{code-lstlistings}
 \usepackage{notes}
 \usepackage{shortcuts}
 \usepackage{acronym}
 \usepackage{placeins}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{microtype}
+
+\geometry{left=2.5cm, right=2.5cm}
 
 \school{\unibo}
 \programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
@@ -27,14 +33,43 @@
 \acrodef{ide}[\textit{IDE}]{\textit{Integrated Development Environment}}
 \acrodef{ai}[\textit{AI}]{\textit{Artificial Intelligence}}
 \acrodef{http}[\textit{HTTP}]{\textit{HyperText Transfer Protocol}}
+\acrodef{lts}[\textit{LTS}]{\textit{Long Term Support}}
+\acrodef{nlp}[\textit{NLP}]{\textit{Natural Language Processing}}
+\acrodef{rfc}[\textit{RFC}]{\textit{Request for Comments}}
+\acrodef{ietf}[\textit{IETF}]{\textit{Internet Engineering Task Force}}
+\acrodef{tcp}[\textit{TCP}]{\textit{Transmission Control Protocol}}
+\acrodef{rest}[\textit{REST}]{\textit{Representational State Transfer}}
+\acrodef{tls}[\textit{TLS}]{\textit{Transport Layer Security}}
+\acrodef{cors}[\textit{CORS}]{\textit{Cross-Origin Resource Sharing}}
+\acrodef{nat}[\textit{NAT}]{\textit{Network Address Translation}}
+\acrodef{sse}[\textit{SSE}]{\textit{Server-Sent Events}}
+\acrodef{bom}[\textit{BOM}]{\textit{Bill of Materials}}
+\acrodef{csp}[\textit{CSP}]{\textit{Constraint Satisfaction Problem}}
+\acrodef{soa}[\textit{SOA}]{\textit{Service-Oriented Architecture}}
+\acrodef{xhtml}[\textit{XHTML}]{\textit{Extensible HyperText Markup Language}}
+\acrodef{ajax}[\textit{AJAX}]{\textit{Asynchronous JavaScript and XML}}
+\acrodef{json}[\textit{JSON}]{\textit{JavaScript Object Notation}}
+\acrodef{xml}[\textit{XML}]{\textit{eXtensible Markup Language}}
+\acrodef{dbms}[\textit{DBMS}]{\textit{Database Management System}}
+\acrodef{vr}[\textit{VR}]{\textit{Virtual Reality}}
+\acrodef{nl}[\textit{NL}]{\textit{Natural Language}}
+\acrodef{gcd}[\textit{GCD}]{\textit{Grammar Constrained Decoding}}
+\acrodef{jwt}[\textit{JWT}]{\textit{JSON Web Token}}
+\acrodef{crud}[\textit{CRUD}]{\textit{Create, Read, Update, Delete}}
+\acrodef{oauth}[\textit{OAuth}]{\textit{Open Authorization}}
+\acrodef{uri}[\textit{URI}]{\textit{Uniform Resource Identifier}}
+\acrodef{webgl}[\textit{WebGL}]{\textit{Web Graphics Library}}
+\acrodef{citygml}[\textit{CityGML}]{\textit{City Geography Markup Language}}
+\acrodef{cswsh}[\textit{CSWSH}]{\textit{Cross-Site WebSocket Hijacking}}
 
-\mainlinespacing{1.241} % line spacing in mainmatter, comment to default (1)
+\mainlinespacing{1.5} % line spacing in mainmatter, comment to default (1) prima era 1.241
 
+\raggedbottom
 \begin{document}
 
 \frontmatter\frontispiece
 
-\begin{abstract}	
+\begin{abstract}
 Il presente lavoro di tesi descrive la progettazione e realizzazione di un prototipo di \ac{mcp} volto a consentire il controllo e la configurazione di un configuratore grafico 3D mediante l’uso di prompt testuali. L’obiettivo principale è stato definire e implementare un meccanismo che traduca comandi descritti in linguaggio naturale nella chiamata automatica degli strumenti appropriati e nell’esecuzione delle operazioni corrispondenti all’interno del configuratore. Il sistema è realizzato in C\# e si articola in moduli per la gestione del contesto, l’invocazione dei tool e la comunicazione in tempo reale con il client grafico tramite WebSocket. Il lavoro comprende l’analisi dei requisiti, la progettazione dell’architettura software, l’implementazione dei moduli principali e la validazione funzionale tramite scenari di test. I risultati dimostrano la fattibilità del paradigma prompt\(\rightarrow\)tool per operazioni di gestione progetto nel configuratore, evidenziando punti di forza e limiti attuali in termini di robustezza semantica, gestione degli errori e scalabilità. Come contributo si propone un prototipo funzionante e linee guida per future estensioni, quali la gestione multi-utente.
 \end{abstract}
 
@@ -43,7 +78,7 @@ Optional. Max a few lines.
 \end{dedication}
 
 %----------------------------------------------------------------------------------------
-\tableofcontents   
+\tableofcontents
 \listoffigures     % (optional) comment if empty
 \lstlistoflistings % (optional) comment if empty
 %----------------------------------------------------------------------------------------
@@ -70,44 +105,30 @@ Optional. Max a few lines.
 %For instance,
 %that you are discussing \acp{vm},
 %you may need both \ac{vm} and \acp{vm}.
-\section{Contesto Aziendale e Motivazione del Progetto}
-\label{sec:contesto-aziendale}
-Il lavoro descritto in questa tesi è stato svolto nell'ambito di un tirocinio presso \textbf{Apra S.p.A.}, una software house attiva da oltre 40 anni nello sviluppo di soluzioni IT per la trasformazione digitale delle imprese. Apra opera in ambiti quali Cloud Computing, Big Data, Digital Experience, Mobile, Business Analytics, Internet of Things e Industria 4.0, collaborando con importanti produttori di tecnologie informatiche e offrendo soluzioni e consulenza per l'ottimizzazione dei processi aziendali.
+\section{Contesto Aziendale e Motivazione del Progetto} \label{sec:contesto-aziendale}
+Il lavoro di ricerca e sviluppo descritto in questa tesi è stato condotto nell'ambito di un tirocinio presso \textbf{Apra S.p.A.}, una realtà consolidata nel panorama delle software house italiane, attiva da oltre quarant'anni nella trasformazione digitale delle imprese. L'azienda si distingue per la sua competenza in settori strategici quali Cloud Computing, Big Data, Internet of Things e Industria 4.0, offrendo consulenza e soluzioni tecnologiche mirate all'ottimizzazione dei processi di business.
 
-Durante il tirocinio sono stato inserito nel team Ricerca e Sviluppo, impegnato nell'identificazione di idee innovative per migliorare la connettività e l'orchestrazione tra servizi AI e applicazioni aziendali. Il team ha manifestato particolare interesse nel valutare la fattibilità dell'integrazione tra server MCP e un front-end specializzato, in questo caso un configuratore grafico 3D, ambito ancora poco esplorato ma potenzialmente rilevante per i flussi di lavoro aziendali.
+L'attività è stata svolta all'interno del team di Ricerca e Sviluppo, un'unità focalizzata sull'esplorazione di nuove paradigmi per l'orchestrazione tra servizi di Intelligenza Artificiale e applicazioni enterprise. In questo contesto, è emerso un forte interesse verso l'integrazione tra il Model Context Protocol (MCP) e interfacce utente specializzate, nello specifico configuratori grafici tridimensionali. Tale ambito, sebbene ancora poco esplorato in letteratura, presenta un potenziale significativo per l'evoluzione dei flussi di lavoro aziendali, promettendo di semplificare l'interazione uomo-macchina in scenari complessi.
 
-L'obiettivo principale del tirocinio è stato esplorativo: verificare come un Model Context Protocol possa essere efficacemente integrato con un configuratore 3D e definire una possibile roadmap tecnica per un'adozione futura. Il lavoro si è focalizzato sulla prototipazione e sulla valutazione di pattern di integrazione (server MCP \(\leftrightarrow\) bridge realtime \(\leftrightarrow\) client 3D), con particolare attenzione a vincoli operativi quali autenticazione, sincronizzazione realtime, robustezza semantica dei comandi e requisiti di sicurezza. Il risultato atteso non è una soluzione definitiva, ma un insieme di evidenze tecniche, criteri di fattibilità e raccomandazioni operative per gli sviluppi successivi (ad es. integrazione di moduli NLP, supporto multi-utente, politiche di auditing e scalabilità).
+Il progetto ha avuto una natura prettamente esplorativa, con l'intento di verificare la fattibilità tecnica di un sistema in cui un server MCP possa controllare un ambiente 3D. L'indagine si è concentrata sulla prototipazione e sulla valutazione dei pattern di integrazione necessari per far dialogare il server MCP con il client grafico attraverso un bridge \emph{real-time}. L'attenzione è stata posta sui vincoli operativi critici, quali i meccanismi di autenticazione, la sincronizzazione istantanea degli stati e la robustezza semantica nell'interpretazione dei comandi. Il risultato atteso non consiste in un prodotto commerciale finito, bensì in un insieme di evidenze empiriche e raccomandazioni architetturali che possano guidare futuri sviluppi, come l'eventuale integrazione di moduli di Natural Language Processing (NLP) o il supporto multi-utente.
 
-Nel contesto dell'attività svolta, due componenti fondamentali erano già presenti in azienda:
-\begin{itemize}
-  \item un bridge realtime basato su SignalR, che funge da canale di comunicazione bidirezionale;
-  \item un configuratore grafico 3D (client), responsabile del rendering e dell'interazione con i modelli.
-\end{itemize}
-Il mio compito è stato quindi di utilizzare questi elementi esistenti come base: sviluppare un prototipo di MCP server, creare il canale bidirezionale tramite il bridge SignalR e adattare il client grafico affinché possa stabilire la connessione, interpretare i messaggi in ingresso e applicare le azioni richieste.
+Dal punto di vista infrastrutturale, il progetto ha preso le mosse da due asset tecnologici già presenti in azienda: un sistema di comunicazione \emph{real-time} basato su SignalR e un configuratore grafico 3D, responsabile del rendering e della logica di visualizzazione. Il compito fondamentale è stato quello di orchestrare questi elementi, sviluppando ex novo il server MCP e adattando il client grafico affinché potesse stabilire una connessione bidirezionale, interpretare i messaggi in ingresso e tradurli in azioni concrete sulla scena tridimensionale.
 
-\section{Obiettivi della tesi}
-\label{sec:obiettivi}
-Obiettivo generale: progettare e realizzare un prototipo operativo di Model Context Protocol che permetta il controllo di un configuratore 3D tramite prompt testuali, valutando la fattibilità tecnica dell'integrazione realtime e definendo una roadmap per un'eventuale industrializzazione.
+\section{Obiettivi della tesi} \label{sec:obiettivi}
 
-Obiettivi specifici e misurabili:
-\begin{itemize}
-  \item Implementare il core MCP in C\# e definire il meccanismo di mapping prompt\,\(\rightarrow\)\,tool 
-  \item Integrare e sfruttare il bridge realtime esistente basato su SignalR/WebSocket per stabilire un canale bidirezionale tra MCP server e client grafico. 
-  \item Adattare il configuratore grafico esistente affinché possa connettersi a SignalR, ricevere e interpretare i messaggi dal MCP e invocare le funzioni appropriate per aggiornare la vista 3D.
-  \item Fornire o migliorare, se necessario, un'interfaccia utente per l'invio di prompt e la visualizzazione dello stato, front-end in Svelte.
-  \item Definire e verificare almeno \textbf{10} scenari end-to-end (ad es.: creazione progetto, aggiunta componente, apertura riga di progetto, consultazione catalogo).
-  \item Documentare il processo di integrazione e consegnare un kit di riproducibilità (README aggiornato, file di esempio, script di avvio) che spieghi come replicare l'integrazione MCP \(\leftrightarrow\) SignalR \(\leftrightarrow\) client 3D.
-\end{itemize}
+L'obiettivo generale del lavoro è la progettazione e la realizzazione di un prototipo operativo basato sul Model Context Protocol, capace di pilotare un configuratore 3D attraverso prompt testuali. Tale implementazione mira a validare la fattibilità dell'integrazione \emph{real-time} e a tracciare una roadmap tecnica per una possibile industrializzazione della soluzione.
 
-Ambito e vincoli:
-\begin{itemize}
-  \item Incluso: integrazione del MCP con il bridge SignalR esistente, adattamento del client grafico per la gestione dei messaggi, implementazione del mapping prompt\(\rightarrow\)tool, prototipazione e test funzionali/integrativi.
-  \item Escluso: sviluppo di un nuovo engine SignalR o riscrittura completa del configuratore 3D; implementazione di NLP avanzato per interpretazione libera del linguaggio (si adotta un insieme di prompt strutturati/templati).
-\end{itemize}
+Nello specifico, il progetto si è articolato in diverse fasi implementative. In primo luogo, è stato necessario sviluppare il nucleo logico del server MCP in linguaggio C\#, definendo i meccanismi che mappano le richieste testuali (prompt) in strumenti e comandi eseguibili (tool). Parallelamente, l'integrazione ha richiesto lo sfruttamento del bridge esistente basato su SignalR e WebSocket per stabilire un canale di comunicazione bidirezionale stabile e reattivo tra il server e l'interfaccia grafica.
+
+Un aspetto cruciale ha riguardato l'adattamento del configuratore 3D: il software client è stato esteso per gestire la connessione al canale di messaggistica, decodificare le istruzioni provenienti dal server MCP e invocare le funzioni interne necessarie per aggiornare la vista o modificare il modello in tempo reale. A supporto dell'interazione, si è lavorato anche sul front-end, sviluppato in Svelte, per garantire un'interfaccia utente efficace nell'invio dei prompt e nella visualizzazione del feedback di sistema.
+
+La validazione del sistema è stata condotta attraverso la definizione e la verifica di molteplici scenari d'uso \emph{end-to-end}, che spaziano dalla creazione di un nuovo progetto all'aggiunta di componenti specifici, fino alla consultazione del catalogo prodotti, coprendo le funzionalità core tipiche di un flusso di configurazione.
+
+È opportuno precisare che il perimetro del progetto si è limitato all'integrazione e all'adattamento dei sistemi, escludendo lo sviluppo da zero di motori \emph{real-time} proprietari o la riscrittura del motore grafico. Inoltre, l'interpretazione dei comandi si basa su strutture predefinite, rimandando a sviluppi futuri l'implementazione di algoritmi avanzati per la comprensione del linguaggio naturale libero.
 \chapter{Background}
 \label{chap:background}
 \section{La Crisi della Frammentazione nell'Ecosistema AI}
-Modelli Linguistici di Grande Scala (\acs{llm}) sono diventati centrali nell'Intelligenza Artificiale (\ac{ai}) moderna, dimostrando capacità straordinarie nella comprensione e generazione del linguaggio naturale \cite{mcp_survey_kent}, e alimentando agenti autonomi che operano in ambienti cloud, edge e desktop\cite{mcp_survey_kent}. Questi agenti sono cruciali per automatizzare compiti complessi ed eseguire azioni interagendo con servizi o strumenti esterni.\cite{mcp_karimova_analysis}
+Modelli Linguistici di Grande Scala (\acs{llm}) sono diventati centrali nell'Intel\-ligenza Artificiale (\ac{ai}) moderna, dimostrando capacità straordinarie nella comprensione e generazione del linguaggio naturale \cite{mcp_survey_kent}, e alimentando agenti autonomi che operano in ambienti cloud, edge e desktop\cite{mcp_survey_kent}. Questi agenti sono cruciali per automatizzare compiti complessi ed eseguire azioni interagendo con servizi o strumenti esterni.\cite{mcp_karimova_analysis}
 
 Nonostante i rapidi progressi nel ragionamento degli LLM, essi rimangono intrinsecamente vincolati dalla dipendenza da dataset di addestramento statici, limitando la loro applicabilità in scenari dinamici e in tempo reale \cite{mcp_survey_aditi}. Tradizionalmente, l'integrazione degli LLM con sistemi esterni si è basata su interfacce di programmazione (\ac{api}) frammentate e costruite su misura.\cite{mcp_survey_kent}
 
@@ -115,49 +136,36 @@ Questa mancanza di standardizzazione crea una crisi di frammentazione\cite{mcp_s
 
 \section{Definizione e Ruolo del Model Context Protocol (MCP)}
 \label{sec:mcp-definition}
-Per rispondere a questa esigenza sistemica di standardizzazione, Anthropic ha introdotto \ac{mcp}, lanciato nel novembre 2024\cite{mcp_anthropic_launch}. L'MCP è uno standard open-source progettato per connettere le applicazioni \ac{ai} a sistemi esterni.\cite{mcp_doc_whatis}
-L'MCP è stato descritto metaforicamente come una "porta USB-C per l'AI". Proprio come USB-C standardizza la connettività dei dispositivi, l'MCP fornisce un modo universale per le applicazioni AI di accedere a dati e strumenti.\cite{mcp_doc_whatis}
-Il suo obiettivo principale è standardizzare il modo in cui le applicazioni forniscono contesto agli LLM, sostituendo le integrazioni frammentate con un protocollo unico e universale. Questo approccio mira a sbloccare l'integrazione sicura e strutturata tra i sistemi \ac{ai} e le risorse esterne, migliorando l'efficacia dei modelli fornendo risposte più pertinenti. L'MCP si inserisce in una linea evolutiva di standardizzazione dei protocolli, simile al successo ottenuto dalle \ac{api} e dal \ac{lsp} nei rispettivi domini.\cite{mcp_doc_whatis}
+Per rispondere a questa esigenza sistemica di standardizzazione, Anthropic ha introdotto il \ac{mcp} nel novembre 2024 \cite{mcp_anthropic_launch}. Questo standard open-source nasce con l'ambizione di unificare il modo in cui le applicazioni basate su intelligenza artificiale comunicano con sistemi esterni, superando la frammentazione delle integrazioni ad-hoc che caratterizza l'attuale panorama tecnologico \cite{mcp_doc_whatis}.
+
+La metafora utilizzata per descrivere l'MCP è quella della "porta USB-C per l'AI": così come lo standard USB-C ha reso universale la connettività fisica tra dispositivi eterogenei, l'MCP si propone di fornire un'interfaccia unificata attraverso cui gli LLM possono accedere a dati e strumenti esterni in modo predicibile e sicuro \cite{mcp_doc_whatis}. L'analogia non è casuale e si inserisce in una tradizione consolidata di protocolli di standardizzazione che hanno rivoluzionato i rispettivi domini: le \ac{api} REST per l'interoperabilità web e il \ac{lsp} per l'integrazione degli strumenti di sviluppo negli \ac{ide} moderni rappresentano precedenti significativi di questo approccio architetturale \cite{mcp_doc_whatis}.
+
+L'obiettivo fondamentale dell'MCP è permettere la sostituzione delle integrazioni frammentate e proprietarie con un protocollo condiviso che riduca gli sforzi in fase di sviluppo e migliorare l'efficacia degli LLM fornendo loro accesso strutturato a contesti dinamici e aggiornati, superando il limite intrinseco dei dataset di addestramento statici. Questo secondo aspetto è particolarmente rilevante in scenari applicativi dove la pertinenza delle risposte dipende dalla capacità del modello di accedere a informazioni in tempo reale, come cataloghi prodotti, database aziendali o interfacce di controllo di sistemi complessi.
 
 \subsection{Architettura e Componenti Centrali}
 \label{subsec:sicurezza-autenticazione}
-L'MCP si basa su un'architettura client-server persistente che facilita l'interazione strutturata tra LLM e risorse esterne. I partecipanti chiave sono:
+L'architettura dell'MCP segue un modello client-server persistente progettato per gestire l'interazione strutturata tra modelli linguistici e risorse esterne. L'ecosistema è composto da tre organi principali dove  ciascuno ha responsabilità ben definite che garantiscono la separazione dei compiti e la modularità del sistema \cite{mcp_doc_arch}.
 
-\begin{itemize}
-\item \textbf{MCP Host:} L'applicazione \ac{ai} (ad esempio, Claude Desktop o un \ac{ide}) che gestisce l'esperienza utente complessiva e coordina uno o più Client MCP. L'Host funge da contenitore per l'LLM e ha la responsabilità di orchestrare le connessioni. Gestisce il consenso dell'utente per l'accesso ai dati e l'esecuzione di azioni, e aggrega il contesto proveniente da più client per fornirlo al modello.\cite{mcp_doc_arch}
+L'\textbf{MCP Host} rappresenta l'applicazione di front-end che orchestra l'intera esperienza utente. Tipicamente incarnato da strumenti come Claude Desktop o ambienti di sviluppo integrati, l'Host funge da contenitore per il modello linguistico e coordina le connessioni verso uno o più Server MCP. La sua responsabilità critica risiede nella gestione del consenso dell'utente. Prima di accedere a dati sensibili o eseguire azioni potenzialmente impattanti, l'Host deve richiedere e ottenere l'autorizzazione esplicita dell'utilizzatore finale. Inoltre, quando il contesto necessario per rispondere a una richiesta proviene da multiple sorgenti, l'Host si occupa di aggregare le informazioni raccolte dai vari client e di presentarle al modello in forma coerente \cite{mcp_doc_arch}.
 
-\item \textbf{MCP Client:} Un componente che mantiene una connessione dedicata uno-a-uno con un Server MCP per ottenere il contesto da utilizzare. Il client agisce come un traduttore, convertendo le richieste dell'LLM (spesso sotto forma di chiamate a funzioni) nel formato del protocollo MCP e, viceversa, trasformando le risposte del server in un formato comprensibile per l'LLM. È anche responsabile della scoperta e dell'utilizzo dei server disponibili.\cite{mcp_doc_arch}
+L'\textbf{MCP Client} opera come componente di traduzione e mediazione. Ogni istanza di client mantiene una connessione dedicata uno-a-uno con un singolo Server MCP, responsabilizzandosi della conversione bidirezionale dei messaggi: trasforma le richieste dell'LLM, spesso espresse come chiamate a funzioni strutturate, nel formato wire del protocollo MCP, e viceversa converte le risposte del server in rappresentazioni comprensibili al modello linguistico. Il client gestisce anche la fase di discovery, identificando i server disponibili nell'ambiente e le capacità che ciascuno espone \cite{mcp_doc_arch}.
 
-\item \textbf{MCP Server:} Il programma che espone le capacità, fornendo dati, servizi e template al Client. I Server MCP possono essere eseguiti sia localmente (ad esempio, tramite il trasporto Stdio) che remotamente (ad esempio, tramite Streamable \ac{http}).Ogni server si concentra su un punto di integrazione specifico, promuovendo la riutilizzabilità e la manutenibilità\cite{mcp_doc_arch}
-\end{itemize}
+L'\textbf{MCP Server} costituisce il punto di integrazione effettivo con sistemi e dati esterni. Ogni server è progettato per concentrarsi su un dominio specifico, ad esempio l'accesso a un database, l'interazione con un'API REST, o il controllo di un'applicazione desktop. Questa specializzazione favorisce la riutilizzabilità e semplifica la manutenzione. I server possono operare in modalità locale, comunicando tramite standard input/output (Stdio) per minimizzare l'overhead di rete, oppure in modalità remota attraverso protocolli HTTP, permettendo deployment distribuiti e scenari cloud-native \cite{mcp_doc_arch}.
 
-L'MCP è composto da due strati concettualmente distinti:\cite{mcp_survey_aditi}
+Dal punto di vista implementativo, il protocollo si articola su due strati ben distinti che riflettono la classica separazione tra semantica e trasporto nelle architetture di rete \cite{mcp_survey_aditi, mcp_doc_arch}. Il \textbf{Data Layer} definisce la struttura logica delle interazioni, basandosi sulla specifica JSON-RPC 2.0 per la serializzazione dei messaggi. Questo livello regola il ciclo di vita delle connessioni, inclusa la fase di negoziazione iniziale delle capacità supportate da client e server, e definisce i primitivi fondamentali del protocollo che verranno discussi nella sezione successiva. Il \textbf{Transport Layer}, invece, si occupa della trasmissione fisica dei dati. L'MCP supporta nativamente due modalità di trasporto: lo Stdio, ottimale per comunicazioni locali tra processi sulla stessa macchina grazie all'assenza di overhead di rete, e lo Streamable HTTP, che sfrutta richieste POST per i messaggi client-server e opzionalmente Server-Sent Events per lo streaming di risposte lunghe, con supporto integrato per meccanismi di autenticazione standard come bearer token o OAuth \cite{mcp_doc_arch, mcp_survey_kent}.
+Il concetto di \textbf{primitive} rappresenta il nucleo semantico dell'MCP. Esse vanno a definire le modalità attraverso cui i server possono esporre funzionalità e contesto alle applicazioni basate su intelligenza artificiale. La specifica distingue tre categorie principali di primitive, ciascuna con un diverso modello di controllo che riflette la natura dell'interazione \cite{mcp_doc_servers}.
 
-\begin{itemize}
-\item \textbf{Livello Dati (Data Layer):} Definisce l'interazione basata sulla specifica JSON-RPC 2.0. Questo livello include la gestione del ciclo di vita (lifecycle management) per la negoziazione delle capacità e i primitives.\cite{mcp_doc_arch}
+I \textbf{Tools} (strumenti) costituiscono primitive controllate dal modello linguistico stesso. Quando un LLM determina che per rispondere a una richiesta utente è necessario eseguire un'azione specifica, come interrogare un database o invocare un'API esterna, può decidere autonomamente di chiamare uno degli strumenti esposti dal server MCP. Questa capacità di invocazione dinamica rappresenta il cuore dell'agentic AI, permettendo ai modelli di andare oltre la semplice generazione testuale per interagire concretamente con sistemi esterni. Ad esempio, uno strumento potrebbe permettere al modello di creare un nuovo record in un gestionale aziendale o di recuperare informazioni in tempo reale da un catalogo prodotti \cite{mcp_doc_servers}.
 
-\item \textbf{Livello Trasporto (Transport Layer):} Gestisce la trasmissione fisica dei messaggi \cite{mcp_survey_kent}. Supporta lo Stdio (per la comunicazione locale tra processi con prestazioni ottimali e senza network overhead) e Streamable \ac{http} (che utilizza \ac{http} POST per i messaggi client-server, con opzionali Server-Sent Events per lo streaming e supporto per autenticazione standard \ac{http} come token o OAuth).\cite{mcp_doc_arch}
-\end{itemize}
- I \textbf{primitives} sono il concetto più importante dell'MCP e definiscono il modo in cui i server possono condividere contesto con le applicazioni \ac{ai}.
+Le \textbf{Resources} (risorse) sono invece primitive controllate dall'applicazione host. Rappresentano sorgenti di dati strutturati in sola lettura che arricchiscono il contesto disponibile al modello senza richiederne l'invocazione esplicita. Ogni risorsa è identificata da un URI univoco che ne specifica la natura e la locazione, seguendo convenzioni familiari come \texttt{file:///path/to/document.md} per file locali o schemi custom per risorse specializzate. Questo approccio dichiarativo permette all'applicazione di decidere quali contesti rendere disponibili, mantenendo il controllo sulla sicurezza e sull'accesso ai dati sensibili \cite{mcp_doc_servers}.
 
-I server espongono tre componenti principali:
+I \textbf{Prompts} (template) sono primitive controllate dall'utente finale, progettate per standardizzare e parametrizzare pattern di interazione ricorrenti. Attraverso template riutilizzabili, gli utenti possono definire flussi di lavoro complessi che combinano più operazioni in sequenze coerenti, garantendo consistenza nelle modalità di interrogazione del sistema. Questa categoria di primitive risulta particolarmente utile in contesti aziendali dove procedure standard devono essere ripetute con variazioni parametriche, permettendo di astrarre la complessità sottostante attraverso interfacce semplificate \cite{mcp_doc_servers}.
 
-\begin{itemize}
-\item \textbf{Tools (Strumenti):} Capacità controllate dal modello (Model-controlled) che l'LLM può invocare per eseguire azioni, chiamate \ac{api} o query di database. L'LLM decide quando utilizzare questi strumenti basandosi sulle richieste dell'utente.\cite{mcp_doc_servers}
+\subsection{Primitive Bidirezionali e Interazione Utente}
+Oltre alle primitive esposte dai server, la specifica MCP definisce meccanismi che i server possono utilizzare per invocare funzionalità sul lato client, abilitando interazioni bidirezionali più sofisticate e mantenendo l'utente umano al centro del processo decisionale \cite{mcp_doc_clients}.
 
-\item \textbf{Resources (Risorse):} Fonti di dati controllate dall'applicazione (Application-controlled) che forniscono dati strutturati e in sola lettura per arricchire il contesto. Le risorse sono identificabili tramite URI unici (ad esempio, \texttt{file:///path/to/document.md}).\cite{mcp_doc_servers}
+Il meccanismo di \textbf{Sampling} permette ai server di richiedere al client l'esecuzione di inferenze da parte dell'LLM senza essere direttamente accoppiati a un modello specifico. Questa astrazione è fondamentale in scenari dove il server necessita di capacità di elaborazione del linguaggio naturale, ad esempio per generare sintesi di documenti o estrarre informazioni strutturate da testo libero. Come illustrato in Figura \ref{fig:sampling}, il flusso prevede che il server invii una richiesta di completamento al client, il quale la sottopone al modello linguistico. Prima di restituire il risultato al server, il sistema può richiedere l'approvazione esplicita dell'utente, implementando così un pattern di \emph{human-in-the-loop} che garantisce supervisione e controllo sulle operazioni potenzialmente sensibili \cite{mcp_doc_clients}.
 
-\item \textbf{Prompts (Template):} Template riutilizzabili e parametrizzati controllati dall'utente (User-controlled) per definire pattern di interazione consistenti e strutturare flussi di lavoro complessi.\cite{mcp_doc_servers}
-\end{itemize}
-
-\subsection{ Ruolo dell'MCP nell'Evoluzione dell'AI e Vantaggi Chiave}
-L'MCP è una tecnologia fondamentale per l'evoluzione verso l'Agentic AI, fornendo meccanismi standardizzati che permettono agli agenti autonomi di accedere a dati in tempo reale e compiere azioni dinamiche.
-
-Oltre ai primitives del server, l'MCP definisce anche primitives che il Client espone ai server, consentendo interazioni bidirezionali più ricche:
-
-\begin{itemize}
-\item \textbf{Sampling:} Consente ai server di richiedere al client l'esecuzione di inferenza (completamenti) da parte dell'LLM, rendendo i server indipendenti dal modello AI specifico e mantenendo il controllo umano (human-in-the-loop) e la sicurezza sul lato client.
-\end{itemize}
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=.8\linewidth]{figures/Sampling.png}
@@ -167,10 +175,8 @@ Oltre ai primitives del server, l'MCP definisce anche primitives che il Client e
 
 \FloatBarrier
 
-\begin{itemize}
-\item \textbf{Elicitation:} Permette ai server di richiedere input specifici o una conferma all'utente (ad esempio, per finalizzare una prenotazione).
+La primitive di \textbf{Elicitation} affronta invece la necessità di raccogliere input specifici dall'utente durante l'esecuzione di operazioni complesse. Quando un server decide che per completare un'azione è necessaria una conferma esplicita o un parametro aggiuntivo, può invocare il client richiedendo l'interazione diretta con l'utilizzatore. Questo pattern risulta essenziale in scenari transazionali come la finalizzazione di una prenotazione o l'autorizzazione di un pagamento, dove la conferma umana rappresenta un requisito necessario. La Figura \ref{fig:Elicitation} illustra il ciclo completo di richiesta, interazione con l'utente e restituzione della risposta al server \cite{mcp_doc_clients}.
 
-\end{itemize}
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=.8\linewidth]{figures/Elicitation.png}
@@ -180,21 +186,19 @@ Oltre ai primitives del server, l'MCP definisce anche primitives che il Client e
 
 \FloatBarrier
 
-\begin{itemize}
-\item \textbf{Roots:} Meccanismo di coordinamento che definisce i confini logici o gli scope operativi, spesso per percorsi di filesystem, per guidare i server su quali risorse concentrarsi.
-\end{itemize}
+Il concetto di \textbf{Roots} introduce un meccanismo per definire i confini logici entro cui i server devono operare. Tipicamente utilizzato per determinare quali porzioni di filesystem o scope operativi specifici possono essere utilizzati, questo primitive guida i server nella selezione delle risorse su cui concentrare le proprie attività, evitando accessi non autorizzati o sprechi computazionali dovuti all'analisi di dati irrilevanti \cite{mcp_doc_clients}.
 
-L'adozione dell'\ac{mcp} porta vantaggi significativi nell'ecosistema \ac{ai}:
+\subsection{Vantaggi Sistemici dell'Adozione MCP}
+L'introduzione di uno standard condiviso per l'integrazione tra sistemi AI e risorse esterne genera benefici che trascendono il singolo progetto, impattando l'intero ecosistema di sviluppo e deployment di applicazioni intelligenti.
 
-\begin{itemize}
-\item \textbf{Standardizzazione e Riutilizzabilità:} Riduce la complessità e il tempo di sviluppo\cite{mcp_doc_whatis}, permettendo agli sviluppatori di riutilizzare il codice di integrazione attraverso diverse applicazioni AI.\cite{mcp_karimova_analysis}
+La \textbf{standardizzazione} costituisce il vantaggio più immediato e tangibile. Eliminando la necessità di sviluppare integrazioni proprietarie per ciascuna combinazione LLM-sistema esterno, il protocollo riduce drasticamente il numero di sforzi ingegneristici e permette agli sviluppatori di concentrarsi sulla logica di business piuttosto che sulla gestione dell'infrastruttura di comunicazione. Il codice di integrazione diventa riutilizzabile attraverso diverse applicazioni AI, accelerando il time-to-market e riducendo i costi di sviluppo \cite{mcp_doc_whatis, mcp_karimova_analysis}.
 
-\item \textbf{Sicurezza e Trasparenza:} Implementa schemi standardizzati per l'autenticazione, l'autorizzazione e l'audit, garantendo coerenza e riducendo i rischi associati agli approcci ad-hoc.\cite{mcp_survey_aditi}\cite{mcp_karimova_analysis}
+Sull'aspetto della \textbf{sicurezza}, l'MCP promuove l'adozione di pattern consolidati per l'autenticazione, l'autorizzazione e l'audit delle operazioni. La presenza di meccanismi standardizzati riduce le vulnerabilità introdotte da implementazioni ad-hoc e facilita la conformità a requisiti normativi in settori regolamentati. La trasparenza delle interazioni, garantita dal logging strutturato delle chiamate a strumenti e risorse, supporta inoltre attività di troubleshooting e analisi forense \cite{mcp_survey_aditi, mcp_karimova_analysis}.
 
-\item \textbf{Composability e Scalabilità:} Promuove un design modulare che supporta la scalabilità indipendente dei componenti (server e client). Inoltre, la composability permette ai nodi di funzionare sia come client che come server, facilitando la creazione di catene di agenti complesse e gerarchiche.\cite{mcp_survey_aditi}\cite{mcp_karimova_analysis}
+La \textbf{composabilità} del protocollo abilita architetture modulari dove i componenti possono essere sviluppati, testati e scalati indipendentemente. Particolarmente rilevante è la capacità dei nodi di funzionare contemporaneamente come client e server, permettendo la costruzione di catene di agenti gerarchiche dove server intermedi aggregano e trasformano dati provenienti da server di livello inferiore prima di esporli ai client di livello superiore. Questa flessibilità architetturale supporta scenari complessi tipici di sistemi enterprise distribuiti \cite{mcp_survey_aditi, mcp_karimova_analysis}.
 
-\item \textbf{Roadmap di Adozione:} L'MCP è visto come un passo iniziale e cruciale in una roadmap di adozione graduale dei protocolli AI, fungendo da base per l'accesso agli strumenti prima di protocolli più complessi come ACP, A2A e ANP.\cite{mcp_survey_kent}
-\end{itemize}
+Infine, dal punto di vista strategico, l'MCP si posiziona come fondamento di una roadmap evolutiva più ampia nell'ecosistema dei protocolli AI. La sua adozione rappresenta un primo passo verso standard più sofisticati per la coordinazione multi-agente (Agent-to-Agent protocols) e la gestione di workflow complessi, fungendo da base tecnica e concettuale per future iterazioni del panorama tecnologico \cite{mcp_survey_kent}.
+
 \section{WebSocket: Protocollo per Comunicazione Real-Time}
 \label{sec:websocket-protocollo}
 %----------------------------------------------------------------------------------------
@@ -239,147 +243,130 @@ L'adozione dell'\ac{mcp} porta vantaggi significativi nell'ecosistema \ac{ai}:
 % - Diagramma handshake HTTP → WebSocket upgrade
 % - Tabella confronto HTTP polling vs WebSocket (latenza, overhead, scalabilità)
 %
-% Pagine stimate: 1-1.5
+% Pagine stimate: 1-1.5\section{Introduzione al protocollo WebSocket}
 
-%----------------------------------------------------------------------------------------
-\section{Configuratori 3D: Panoramica e Contesto}
-\label{sec:configuratori-3d}
-%----------------------------------------------------------------------------------------
+Il protocollo WebSocket, standardizzato dall’IETF con la RFC~6455 nel dicembre 2011 \cite{fette_rfc6455}, rappresenta la tecnologia di riferimento per la gestione di comunicazioni bidirezionali (\emph{full-duplex}) e persistenti tra client e server. Nacque con l'obiettivo di superare i limiti dell'architettura RESTful tradizionale, questo standard definisce un meccanismo di trasporto su TCP che, pur mantenendo la compatibilità con l'infrastruttura web esistente (come proxy e firewall), si discosta radicalmente dal modello richiesta-risposta tipico di HTTP \cite{fette_rfc6455}.
 
-% Questa sezione introduce il concetto di configuratori 3D e il loro ruolo nel progetto,
-% fornendo contesto per comprendere le sfide dell'integrazione AI-3D.
+Il ciclo di vita di una connessione WebSocket inizia con una fase di negoziazione, nota come \emph{opening handshake}, che sfrutta lo stesso protocollo HTTP per stabilire il canale. Il client invia una richiesta \texttt{GET} contenente l'header \texttt{Upgrade: websocket}, segnalando l'intenzione di cambiare protocollo; se il server accetta la richiesta, risponde con lo stato \texttt{101 Switching Protocols} \cite{fette_rfc6455}. Terminato questo scambio iniziale, il protocollo HTTP viene abbandonato e la connessione TCP sottostante rimane aperta, andando a creare un tunnel persistente per lo scambio continuo di dati.
 
-%----------------------------------------------------------------------------------------
-\subsection{Cosa sono i Configuratori 3D}
-\label{subsec:cosa-sono-configuratori}
-%----------------------------------------------------------------------------------------
+Tale approccio risolve le inefficienze storiche legate alle tecniche di \emph{polling} o \emph{long-polling}, dove il client era costretto a interrogare periodicamente il server o a mantenere aperte connessioni HTTP multiple in attesa di dati. WebSocket ha eliminando la necessità di instaurare nuove connessioni TCP e di inviare ridondanti header HTTP per ogni singolo messaggio,  riducendo drasticamente l'overhead di rete e la latenza, aprendo a nuovi scenari real-time ad alte prestazioni come dashboard finanziarie, giochi multiplayer o sistemi di messaggistica istantanea \cite{microsoft_signalr_docs}.
 
-I configuratori 3D sono applicazioni software interattive che permettono agli utenti di personalizzare prodotti complessi (mobili, cucine, interni, veicoli) visualizzando in tempo reale il risultato in un ambiente tridimensionale.
+\subsection{Caratteristiche architetturali}
 
-\paragraph{Caratteristiche Principali:}
+La peculiarità fondamentale del protocollo risiede nella sua natura \emph{full-duplex}, che disaccoppia la comunicazione dalla logica di richiesta esplicita: client e server possono trasmettere dati in qualsiasi momento e in modo indipendente l'uno dall'altro \cite{fette_rfc6455} determinando una maggiore libertà operativa. Essa è supportata da una struttura orientata ai messaggi (\emph{message-oriented}), che si contrappone al flusso di byte continuo ("stream") tipico del TCP puro. I dati applicativi vengono incapsulati in unità discrete denominate \emph{frame}, le quali possono trasportare payload testuali (codificati in UTF-8) o binari, semplificando notevolmente l'implementazione lato applicativo rispetto alla gestione diretta dei socket grezzi \cite{fette_rfc6455}.
 
+L'efficienza del protocollo è garantita da un framing estremamente leggero. A differenza dei pacchetti HTTP, che trasportano corposi metadati a ogni scambio, i frame WebSocket aggiungono solo pochi byte di intestazione al payload utile. Questo design minimizza il consumo di banda e riduce significativamente la latenza percepita rispetto alle soluzioni basate su polling, eliminando il ritardo introdotto dall'instaurazione ripetuta delle connessioni \cite{microsoft_signalr_docs}. Inoltre, il protocollo prevede frame di controllo specifici, come \emph{Ping} e \emph{Pong}, essenziali per monitorare lo stato di salute della connessione (heartbeat). Tramite tali meccanismi gli endpoint sono in grado di rilevare disconnessioni anomale e di mantenere attivo il canale anche in presenza di NAT o proxy che potrebbero chiudere le connessioni inattive, garantendo così la stabilità e l'affidabilità necessarie per le moderne applicazioni web \cite{fette_rfc6455}.
+
+\subsection{Vantaggi operativi e prestazionali}
+
+L’adozione dello standard WebSocket comporta un significativo avanzamento rispetto alle architetture tradizionali basate su polling, offrendo benefici concreti in ambito  di efficienza di rete che di reattività applicativa. Il vantaggio più immediato risiede nel drastico abbattimento della latenza \emph{end-to-end}. Eliminando la necessità di negoziare ripetutamente la connessione e di trasmettere ridondanti header HTTP per ogni scambio di dati, il protocollo minimizza l’overhead strutturale successivo all'\emph{handshake} iniziale. Le documentazioni tecniche confermano come questa ottimizzazione del payload garantisca un utilizzo della larghezza di banda strettamente limitato ai dati applicativi reali, superando le limitazioni prestazionali del \emph{long-polling} \cite{microsoft_signalr_docs}.
+
+La peculiarità della leggerezza strutturale apporta dei vantaggi anche sulla scalabilità lato server. A differenza del polling, che invia al backend migliaia di richieste HTTP distinte, WebSocket mantiene attive singole connessioni TCP persistenti. Questo modello riduce il carico computazionale necessario per l'apertura e chiusura dei socket, permettendo all'infrastruttura di gestire un numero elevato di connessioni concorrenti con un consumo di risorse contenuto \cite{microsoft_signalr_docs}. Tale caratteristica rende l'architettura particolarmente idonea per scenari ad alta densità di utenti, facilitando le strategie di scaling orizzontale.
+
+Dal punto di vista funzionale, il protocollo abilita un vero e proprio modello di comunicazione \emph{push} proattivo. Il server diviene in grado di trasmettere informazioni al client istantaneamente, non appena queste divengono disponibili, svincolandosi dalle logiche di richiesta esplicita. Tale cambio di paradigma è fondamentale per l'implementazione di funzionalità \emph{real-time} moderne, come chat, notifiche istantanee o dashboard live, senza ricorrere a complessi meccanismi di sincronizzazione. Infine, l'affernazione dell'ecosistema garantisce un'ampia interoperabilità: il supporto nativo dell'API \texttt{WebSocket} in tutti i moderni browser e l'integrazione nei principali framework lato server (incluso l'ambiente .NET tramite SignalR \cite{ms_signalr_intro}) rendono l'adozione di questa tecnologia uno standard de facto, privo della necessità di plugin esterni o soluzioni proprietarie.
+
+\subsection{Limitazioni intrinseche e sfide implementative}
+
+Sebbene il protocollo WebSocket offra innegabili vantaggi in termini di latenza e ridotto overhead, la sua adozione introduce complessità architetturali non trascurabili rispetto al modello HTTP stateless tradizionale. Una prima criticità riguarda la gestione delle risorse lato server infatti la natura persistente della connessione impone che il server mantenga attivo lo stato per ogni client collegato, gestendo allocazione di memoria, socket aperti e meccanismi di \emph{heartbeat} (ping/pong). In scenari ad alta concorrenza, ciò comporta un consumo di risorse significativamente superiore rispetto a un approccio stateless, richiedendo strategie di scalabilità orizzontale più sofisticate.
+
+Un ulteriore ostacolo risiede nell'affidabilità della connessione in ambienti di rete eterogenei. Il protocollo, nella sua forma "grezza" (\emph{raw}), non prevede meccanismi nativi di fallback indispensabili qualora la connessione non possa essere stabilita a causa di proxy restrittivi, firewall aziendali o client obsoleti, la comunicazione fallisce senza alternative automatiche. Spetta dunque allo sviluppatore il compito di implementare logiche personalizzate di riconnessione o di degradazione verso protocolli alternativi.
+
+Infine, vanno considerati gli aspetti di sicurezza. L'utilizzo del protocollo su canali cifrati (\texttt{wss://}) è doveroso per proteggere l'integrità dei dati, introducendo tuttavia un costo computazionale aggiuntivo per le operazioni crittografiche TLS. Parallelamente, il modello di sicurezza differisce da quello delle richieste HTTP standard dove le policy CORS (Cross-Origin Resource Sharing) non si applicano direttamente all'handshake WebSocket, costringendo il server a validare esplicitamente l'header \texttt{Origin} per prevenire attacchi di tipo Cross-Site WebSocket Hijacking (CSWSH).
+
+\subsection{Adozione di SignalR nel contesto progettuale}
+
+Alla luce delle sfide operative sopra discusse, l'architettura del progetto ha previsto l'integrazione di SignalR come livello di astrazione per la gestione della comunicazione real-time. Questa scelta strategica permette di beneficiare delle prestazioni del protocollo WebSocket, utilizzato come trasporto preferenziale in conformità alla RFC 6455, alleggerendone al contempo le rigidità strutturali \cite{ms_signalr_intro}.
+
+Il vantaggio determinante di SignalR risiede nella sua capacità di negoziare automaticamente il miglior trasporto disponibile. Qualora l'ambiente di rete non supporti WebSocket, la libreria esegue un fallback trasparente verso tecnologie alternative, come i Server-Sent Events (SSE) o il long-polling, garantendo la continuità del servizio senza richiedere interventi manuali nel codice applicativo. Delegan do al framework la complessità della gestione delle connessioni, delle riconnessioni automatiche e della compatibilità trasversale, è stato possibile concentrare lo sviluppo sulla logica di business, aumentando la robustezza complessiva del sistema. I dettagli implementativi e la configurazione specifica di SignalR all'interno dello stack tecnologico verranno analizzati approfonditamente nel Capitolo 3.
+
+
+\section{Panoramica e contesto su i Configuratori 3D}
+
+Nel contesto dell'informatica applicata ai processi industriali e commerciali, la configurazione di prodotto rappresenta un'attività progettuale specifica che interviene a valle della definizione ingegneristica primaria \cite{zhang2014product}. Essa può essere definita come il processo di composizione di un prodotto personalizzato partendo da un insieme predefinito di componenti, parti o assemblaggi, nel rispetto di un set di vincoli ben determinati che limitano le modalità di selezione e combinazione degli elementi stessi \cite{zhang2014product}. L'obiettivo finale di tale processo, supportato da sistemi software denominati configuratori, è la generazione di una specifica di prodotto valida, che includa distinta base (BOM), parametri di design e relazioni strutturali \cite{zhang2014product}.
+
+L'evoluzione verso la \textit{Mass Customization} ha reso necessario lo sviluppo di piattaforme che permettano al cliente di interagire direttamente con lo "spazio delle soluzioni" del prodotto \cite{haug2009from}. In questo scenario, i configuratori 3D assumono un ruolo cruciale, non limitandosi alla sola selezione delle opzioni proposte, ma offrendo una visualizzazione in tempo reale delle scelte effettuate. La letteratura identifica nella rappresentazione visiva un elemento critico,infatti, mentre i configuratori tradizionali possono limitarsi a descrizioni testuali o bidimensionali, le moderne piattaforme web-based integrano tecnologie di visualizzazione 3D per colmare il divario tra le aspettative del cliente e il prodotto finale \cite{amirebrahimi2012integrated}. Tuttavia, l'efficacia di tali sistemi dipende strettamente dalla capacità di gestire la complessità computazionale e la trasmissione dei dati su reti web, spesso ricorrendo a tecnologie come WebGL o viewer basati su plugin (ad esempio Google Earth API o standard CityGML) per il rendering della scena \cite{amirebrahimi2012integrated}.
+
+\subsection{Gestione delle Regole e Motore di Configurazione}
+
+Il cuore funzionale di un configuratore non risiede solamente nella sua interfaccia grafica, ma nel motore logico che regola la coerenza del prodotto. La configurazione opera all'interno di uno spazio di soluzioni predefinito, caratterizzato da processi stabili ma flessibili \cite{haug2009from}. Per gestire questa complessità, il sistema deve contenere conoscenze del dominio organizzate in ontologie, vincoli e regole \cite{zhang2014product}.
+
+Le regole di configurazione agiscono permettono di porre un controllo sulla fattibilità tecnica definendo le relazioni tra i componenti (ad esempio, "Se viene selezionato il Componente A, allora il Componente B è obbligatorio") e prevengono combinazioni invalide. In contesti ingegneristici complessi (\textit{Engineer-To-Order}), la sfida principale nella progettazione del configuratore risiede proprio nella costruzione di una base di conoscenza (\textit{Knowledge Base}) robusta, capace di automatizzare compiti di specificazione che tradizionalmente richiederebbero l'intervento umano \cite{haug2009from}. Modellare tale conoscenza può avvalersi di approcci basati su \textit{Constraint Satisfaction Problems} (CSP), che permettono al sistema di verificare la consistenza delle scelte dell'utente e, se necessario, proporre spiegazioni o diagnosi in caso di conflitti \cite{zhang2014product}.
+
+\subsection{Calcolo Dinamico e Output del Processo}
+
+Parallelamente alla validazione tecnica, il configuratore deve gestire gli aspetti economici e documentali della transazione. Sebbene in un contesto di \textit{Mass Customization} l'obiettivo sia mantenere i prezzi vicini a quelli della produzione di massa, nei sistemi complessi il configuratore agisce spesso come strumento di automazione per la generazione di preventivi (quotazioni) \cite{haug2009from}.
+
+Il calcolo dinamico del prezzo avviene in tempo reale in risposta alle modifiche apportate dall'utente alla configurazione 3D. Il sistema associa a ogni componente o variante selezionata un valore economico, aggiornando istantaneamente il totale. Al termine del processo, l'output non è limitato alla sola visualizzazione a schermo ma  il configuratore deve essere in grado di esportare dati strutturati necessari per la produzione e la vendita. Essi includono tipicamente la distinta base (BOM), i piani di instradamento (\textit{routing plans}), le specifiche tecniche dettagliate e la documentazione di offerta \cite{zhang2014product}. In alcuni scenari avanzati, come nel settore dell'impiantistica o dell'ingegneria civile, l'automazione riguarda la creazione di specifiche di prodotto complete che fungono esse stesse da output primario del processo \cite{haug2009from}.
+
+\subsection{Architettura del Sistema: Frontend, Backend e Scambio Dati}
+
+Dal punto di vista dell'implementazione tecnica, un configuratore 3D moderno adotta tipicamente un'Architettura Orientata ai Servizi (SOA), strutturata in livelli concettuali distinti che garantiscono modularità e scalabilità \cite{amirebrahimi2012integrated}.
 \begin{itemize}
-\item \textbf{Rendering 3D Real-Time:} Utilizzo di tecnologie WebGL, Three.js, Unity o Unreal Engine per rendering interattivo nel browser o desktop
-
-\item \textbf{Parametrizzazione Prodotti:} Gestione di cataloghi con migliaia di articoli, ognuno con parametri (dimensioni, colori, finiture, accessori)
-
-\item \textbf{Regole di Configurazione:} Engine che valida combinazioni valide (es. scaffale larghezza 80cm compatibile solo con ante specifiche)
-
-\item \textbf{Calcolo Prezzi Dinamico:} Aggiornamento in tempo reale del prezzo totale in base a configurazione corrente
-
-\item \textbf{Esportazione Dati:} Generazione documenti tecnici (preventivi, distinte materiali, disegni CAD)
+  \item Il livello di \textbf{Frontend:} (o \textit{Presentation Layer}) è responsabile dell'interfaccia utente e della visualizzazione 3D. Implementato  tramite tecnologie web standard (XHTML dinamico, Ajax, JavaScript), questo livello gestisce l'interazione con l'utente e comunica con il server per aggiornare la scena \cite{amirebrahimi2012integrated}. La visualizzazione 3D richiede la gestione efficiente di oggetti geometrici complessi per questo è essenziale ottimizzare il formato di scambio dati tra client e server. Sebbene l'XML (\textit{eXtensible Markup Language})sia stato storicamente utilizzato, è stato osservato che esso comporta un \textit{overhead} eccessivo per la trasmissione di grandi moli di dati geometrici. Di conseguenza, formati più compatti come JSON (\textit{JavaScript Object Notation}) sono preferibili per garantire prestazioni elevate e ridurre i tempi di caricamento nel viewer 3D \cite{amirebrahimi2012integrated}.
+  \item  Il \textbf{Backend} ospita il motore della piattaforma (\textit{Platform Engine} o \textit{Business Layer}). Questo livello contiene i componenti core che eseguono la logica di business, gestiscono il \textit{workflow} di configurazione e coordinano l'analisi dei modelli \cite{amirebrahimi2012integrated}. È in questo strato che risiede il \textit{Model Coordinator}, responsabile di orchestrare gli input e gli output dei vari moduli di calcolo e assicura che i dati scambiati tra le componenti siano semanticamente coerenti
+  \item Infine, il livello \textbf{Database} (o \textit{Data Layer}) costituisce il repository per la persistenza dei dati. In applicazioni che richiedono la gestione di oggetti spaziali e modelli 3D, è necessario utilizzare \textit{Database Management Systems} (DBMS) capaci di gestire dati spaziali e non spaziali, timestamp e metadati relativi alle librerie di modelli \cite{amirebrahimi2012integrated}. L'accesso a questi dati è gestito da un livello di accesso ai dati (\textit{Data Access Layer}) in grado di diminuire la complessità delle query dirette al database grazie all'esposione di  API per il recupero e la manipolazione degli oggetti necessari alla configurazione. Questa separazione garantisce che la logica di visualizzazione nel frontend rimanga disaccoppiata dalla struttura fisica di memorizzazione dei dati, facilitando la manutenzione e l'evoluzione futura del sistema \cite{amirebrahimi2012integrated}.
 \end{itemize}
 
-\paragraph{Architettura Tipica:}
+\subsection{Casi d'uso e applicazioni dei configuratori 3D}
 
-\begin{itemize}
-\item \textbf{Frontend:} Interfaccia utente per selezione prodotti e visualizzazione 3D
-\item \textbf{Backend:} API REST per catalogo prodotti, salvataggio progetti, calcolo prezzi
-\item \textbf{Engine 3D:} Libreria rendering (Three.js, Babylon.js) che gestisce scene, luci, telecamere
-\item \textbf{Database:} Catalogo prodotti con geometrie 3D (mesh, texture) e metadati
-\end{itemize}
+L'adozione di configuratori 3D nell'ambito della mass customization rappresenta un punto di svolta nell'interazione tra aziende e consumatori, andando a creare un  valore sia per chi acquista sia per chi produce. L'analisi della letteratura scientifica permette di comprendere come questi strumenti si inseriscano in diversi contesti applicativi, con impatti concreti su molteplici dimensioni del processo di acquisto e produzione.
 
-%----------------------------------------------------------------------------------------
-\subsection{Casi d'Uso e Applicazioni}
-\label{subsec:casi-uso-configuratori}
-%----------------------------------------------------------------------------------------
+La mass customization, definita come la capacità di fornire prodotti personalizzati a ogni cliente attraverso agilità, flessibilità e integrazione di processo \cite{frutos2004decision}, trova nei configuratori 3D uno degli strumenti più efficaci per conciliare la produzione di massa con le esigenze individuali dei clienti. L'obiettivo primario è fornire prodotti che rispondano al meglio alle scelte reali dei clienti, basate su necessità e preferenze specifiche, mantenendo al contempo un'efficienza prossima a quella della produzione di massa \cite{frutos2004decision}. I configuratori 3D si collocano in questo contesto come mediatori tra la complessità tecnica del design modulare e la semplicità richiesta dall'esperienza utente.
 
-I configuratori 3D sono utilizzati in diversi settori:
+Uno dei settori in cui i configuratori 3D hanno dimostrato particolare efficacia è quello della personalizzazione di prodotti complessi e costosi, come nel caso della configurazione di appartamenti residenziali. In tale ambito, i configuratori permettono ai clienti di navigare tra componenti e opzioni offerte dall'azienda, definendo vincoli e regole relative alle configurazioni possibili del prodotto \cite{frutos2004decision}. La modularità dei prodotti, basata sulla composizione di componenti standard o sulla variazione controllata di elementi predefiniti, favorisce l'uso di interfacce 3D che rendono le scelte immediatamente comprensibili.
 
-\begin{itemize}
-\item \textbf{Arredamento e Interior Design:} Configurazione cucine, soggiorni, uffici (es. IKEA Home Planner, Nolte Küchen)
+Dal \textbf{punto di vista del cliente:}
 
-\item \textbf{Automotive:} Personalizzazione veicoli con optional, colori, interni (es. BMW Individual, Porsche Car Configurator)
+I configuratori 3D rispondono a una lacuna fondamentale dei siti di e-commerce tradizionali, ovvero la carenza di esperienze di acquisto che si avvicinino alla realtà. Le interfacce 2D, basate su immagini statiche e testo, non permettono ai consumatori di sviluppare una sensazione di presenza, interattività e coinvolgimento collaborativo \cite{elradi2017commerce}. Al contrario, gli ambienti 3D simulano spazi reali, offrono modelli di prodotto tridimensionali e consentono ai clienti di navigare virtualmente attraverso le proprie scelte, replicando dinamiche tipiche dei negozi fisici. Questa esperienza immersiva migliora significativamente la qualità percepita dell'interazione e la soddisfazione complessiva del consumatore.
 
-\item \textbf{Architettura e Edilizia:} Progettazione spazi, scelta materiali, visualizzazione render
+In particolare, l'integrazione di tecnologie di realtà virtuale (VR) negli ambienti di e-commerce 3D consente ai clienti di sperimentare i prodotti in modo più realistico prima dell'acquisto, superando i limiti delle recensioni scritte o delle valutazioni numeriche. La possibilità di testare virtualmente prodotti prima della fase di acquisto riduce l'incertezza e favorisce una valutazione più accurata delle alternative disponibili \cite{elradi2017commerce}. Inoltre, l'uso di strumenti interattivi basati su avatar e agenti virtuali contribuisce a creare un senso di presenza sociale e fiducia, elementi cruciali nei contesti di commercio online \cite{elradi2017commerce}.
 
-\item \textbf{Manufacturing B2B:} Configurazione macchinari industriali, impianti, sistemi modulari
+L'efficacia dei configuratori 3D si estende anche alla gestione della complessità decisionale. Quando i clienti sono chiamati a configurare un prodotto selezionando tra un numero elevato di componenti e opzioni, il processo decisionale può diventare complesso e frustrante, specialmente per utenti non esperti. I configuratori avanzati integrano modelli decisionali multicriterio che supportano il cliente nell'identificare la configurazione ottimale in base alle proprie preferenze e vincoli. Ad esempio, un sistema decisionale che utilizza tecniche di programmazione lineare intera può massimizzare l'utilità del cliente soggetta a vincoli tecnici, estetici e finanziari definiti sia dall'utente sia dai progettisti \cite{frutos2004decision}. In questo modo, il configuratore non si limita a visualizzare le opzioni, ma guida attivamente l'utente verso scelte che rispondono al meglio alle sue esigenze.
 
-\item \textbf{E-commerce Premium:} Prodotti custom (gioielli, biciclette, abbigliamento su misura)
-\end{itemize}
+\textbf{Dal lato aziendale:}
 
-\paragraph{Vantaggi per Clienti:}
+L'adozione di configuratori 3D offre vantaggi strategici e operativi significativi. In primo luogo, questi strumenti facilitano l'acquisizione di conoscenza tacita dai clienti, trasformandola in informazioni esplicite e strutturate che possono essere integrate nei database aziendali. Il processo di configurazione genera dati preziosi sulle preferenze individuali, sulle funzioni di valore assegnate agli attributi dei prodotti e sui vincoli espressi dai consumatori. Questa base di conoscenza costituisce un patrimonio informativo che l'azienda può utilizzare per orientare lo sviluppo di nuovi prodotti e per affinare le strategie di marketing \cite{frutos2004decision}.
 
-\begin{itemize}
-\item Visualizzazione realistica del prodotto finale prima dell'acquisto
-\item Maggiore coinvolgimento (engagement) e riduzione incertezza
-\item Esplorazione illimitata di varianti senza vincoli fisici showroom
-\item Decisioni più consapevoli, riduzione resi
-\end{itemize}
+Inoltre, i configuratori 3D contribuiscono a ridurre i costi di personalizzazione, rendendo la mass customization economicamente sostenibile. La  modularità, supportata da rappresentazioni compatte e gerarchiche delle architetture di prodottoconsente alle aziende di offrire varianti in modo economicamente sostenibile. L'adozione di modelli object‑oriented e algoritmi di ottimizzazione permette di affrontare la complessità derivante dalle combinazioni, mantenendo coerenza tecnica e fattibilità produttiva \cite{frutos2004decision}.
 
-\paragraph{Vantaggi per Aziende:}
+Un altro beneficio rilevante per le aziende riguarda il miglioramento della fiducia dei consumatori. Nei contesti di e-commerce tradizionale, la costruzione della fiducia è ostacolata dalla mancanza di interazione fisica e dalla difficoltà di valutare la qualità dei prodotti. I configuratori 3D, attraverso la simulazione realistica e la visualizzazione dettagliata, aumentano la trasparenza del processo di acquisto e facilitano la formazione di fiducia cognitiva ed emotiva nei confronti del fornitore \cite{elradi2017commerce}. La presenza di avatar che fungono da consulenti virtuali e l'uso di interfacce vocali contribuiscono ulteriormente a migliorare la percezione di affidabilità e competenza dell'azienda.
 
-\begin{itemize}
-\item Riduzione errori ordine (configurazione validata da engine)
-\item Automazione processo preventivazione
-\item Raccolta dati su preferenze clienti (analytics configurazioni)
-\item Differenziazione competitiva (esperienza utente premium)
-\end{itemize}
+Nel settore del marketing, i configuratori 3D si configurano come strumenti promozionali altamente efficaci. La possibilità di coinvolgere i clienti in esperienze immersive e interattive aumenta il livello di engagement e rafforza l'equità del brand. La ricchezza dell'ambiente virtuale e il grado di coinvolgimento che esso genera hanno un impatto positivo sull'intenzione di acquisto e sulla fedeltà del cliente \cite{elradi2017commerce}. Le aziende possono sfruttare questi strumenti per condurre test di mercato su prototipi virtuali di nuovi prodotti, raccogliendo feedback dai consumatori in modo rapido e meno oneroso rispetto ai test su prodotti fisici.
+
+L'applicazione dei configuratori 3D si estende anche a settori che richiedono elevata personalizzazione tecnica, come la produzione di biciclette su misura, l'arredamento personalizzato e la progettazione di componenti biomeccanici. In questi ambiti, la combinazione di modelli 3D interattivi con sistemi di supporto decisionale consente ai clienti di esprimere le proprie esigenze in termini di attributi funzionali ed estetici, lasciando al sistema il compito di tradurre tali esigenze in specifiche tecniche realizzabili. Questo approccio riduce il rischio di errori di configurazione e accelera il processo di definizione del prodotto finale.
+
+Tuttavia, l'implementazione di configuratori 3D presenta delle tortuosità da gestire. La complessità del processo di valutazione aumenta significativamente al crescere del numero di componenti, opzioni e criteri di valutazione. Anche con l'ausilio di strumenti grafici e interattivi, l'analisi delle funzioni di valore, la definizione delle condizioni di indipendenza tra criteri e il confronto tra numerose alternative possono risultare compiti onerosi per il cliente \cite{frutos2004decision}. È quindi essenziale progettare interfacce che bilancino espressività e semplicità d'uso, guidando l'utente senza sovraccaricarlo di informazioni.
+
+I configuratori 3D rappresentano una nuova tecnlogia avanzata in grado di rispoondere alle esigenze di personalizzazione del mercato contemporaneo. Per i clienti, essi offrono esperienze di acquisto più ricche, trasparenti e soddisfacenti, riducendo l'incertezza e facilitando scelte consapevoli. Per le aziende, costituiscono strumenti strategici per la raccolta di conoscenza, l'ottimizzazione dei processi produttivi, la riduzione dei costi di personalizzazione e il rafforzamento del legame con il cliente. La loro diffusione nei prossimi anni dipenderà dalla capacità di integrare efficacemente tecnologie di realtà virtuale, modelli decisionali avanzati e architetture di prodotto modulari, mantenendo al contempo un'interfaccia accessibile e intuitiva per utenti con diversi livelli di competenza tecnica.
 
 %----------------------------------------------------------------------------------------
-\subsection{Sfide dell'Integrazione AI-3D}
-\label{subsec:sfide-integrazione-ai-3d}
-%----------------------------------------------------------------------------------------
+\subsection{Sfide dell'Integrazione AI-3D} \label{subsec:sfide-integrazione-ai-3d}
 
-L'integrazione di AI conversazionale (LLM) con configuratori 3D presenta sfide uniche che motivano questo lavoro di tesi:
+L'integrazione tra sistemi di Intelligenza Artificiale Conversazionale e configuratori 3D costituisce un dominio ingegneristico complesso, caratterizzato dalla necessità di far convergere l'elasticità dell'elaborazione del linguaggio naturale (NL) con la rigidità dei vincoli spaziali e parametrici tipici della progettazione assistita. In questo scenario, il Model Context Protocol (MCP) assume il ruolo cruciale di meccanismo di orchestrazione e intermediazione, necessario per colmare il divario architetturale tra un Large Language Model (LLM) e un ambiente di simulazione altamente strutturato.
 
-\paragraph{Sfide Tecniche:}
+Una delle criticità primarie risiede nella traduzione affidabile dell'intento utente in comandi macchina logicamente validi. Nonostante gli LLM siano strumenti potenti per convertire il linguaggio naturale in rappresentazioni simboliche o chiamate API \cite{Raspanti2025GCD, Schick2023Toolformer, Patil2024Gorilla}, la garanzia della correttezza sintattica rimane una sfida aperta \cite{Raspanti2025GCD}. Per mitigare il rischio di output non conformi, la letteratura propone tecniche come il Grammar Constrained Decoding (GCD), che obbliga il modello a generare output aderenti a una grammatica formale predefinita, come una Context-Free Grammar \cite{Raspanti2025GCD}. Tuttavia, sebbene il GCD possa assicurare la validità formale della sintassi, non è in grado di prevenire errori semantici, come violazioni della consistenza dei predicati o riferimenti a variabili inesistenti, che impediscono l'esecuzione corretta delle istruzioni nel configuratore \cite{Raspanti2025GCD}.
 
-\begin{enumerate}
-\item \textbf{Mapping Linguaggio Naturale \(\rightarrow\) Comandi Strutturati:}
-   - Input AI: "Aggiungi uno scaffale bianco largo 80 cm"
-   - Output Configuratore: \texttt{AddArticle(cod: "SP80", params: \{col: "bianco", l: 800\})}
-   - Necessità di interpretare dimensioni, colori, posizioni in formato strutturato
+Oltre alla traduzione dei comandi, emerge la complessità legata alla sincronizzazione dello stato e alla gestione dei vincoli in un ambiente distribuito. Il configuratore 3D opera come uno strumento specializzato che richiede input precisi per eseguire calcoli complessi \cite{Patil2024Gorilla}. Di conseguenza, l'MCP deve garantire che le richieste generate dall'AI rispettino rigorosamente i limiti interni del motore 3D, come la precisione numerica o i range validi dei parametri \cite{Patil2024Gorilla}. Questo richiede un netto disaccoppiamento architetturale: le attività di parsing e ragionamento sono delegate all'LLM, mentre l'esecuzione effettiva spetta al configuratore, con l'MCP che funge da orchestratore centrale del flusso di lavoro \cite{Daraghmi2022Saga, Raspanti2025GCD, Schick2023Toolformer}. Tale separazione preserva la generalità decisionale del modello linguistico, che deve apprendere autonomamente quali strumenti invocare e come popolarne gli argomenti \cite{Schick2023Toolformer}.
 
-\item \textbf{Sincronizzazione Stato:}
-   - Configuratore mantiene stato progetto (articoli aggiunti, prezzi)
-   - AI deve avere visibilità su stato corrente per suggerimenti contestuali
-   - Necessità di notifiche bidirezionali per aggiornamenti real-time
+Tuttavia, la gestione di transazioni che coinvolgono servizi eterogenei introduce sfide significative per la coerenza dei dati. In caso di errori durante l'elaborazione, ad esempio un vincolo geometrico non soddisfatto, il sistema deve essere in grado di gestire il fallimento e avviare azioni di compensazione per annullare eventuali modifiche parziali \cite{Daraghmi2022Saga}. Per evitare anomalie dovute alla mancanza di isolamento dei dati, è preferibile posporre il commit finale sul database fino al completamento dell'intero flusso, gestendo lo stato transitorio a livello di cache in memoria \cite{Daraghmi2022Saga}. L'uso di sistemi di messaging asincrono, come Apache Kafka, risulta essenziale in questo contesto per mantenere l'ordine delle richieste e garantire la consistenza finale \cite{Daraghmi2022Saga}.
 
-\item \textbf{Gestione Vincoli e Validazioni:}
-   - Configuratore ha regole complesse (compatibilità, fisica, pricing)
-   - AI potrebbe suggerire configurazioni invalide se non consapevole vincoli
-   - Necessità di feedback loop: AI propone \(\rightarrow\) Configuratore valida \(\rightarrow\) AI adatta
+Questo livello intermedio comporta un aumento di latenza che può degradare l'esperienza realtime \cite{Schick2023Toolformer}. Per gestire scenari ad alto traffico sono necessarie strategie come l'impiego di cache in memoria (per esempio Redis), che riducono l'I/O su disco e migliorano il throughput delle operazioni CRUD \cite{Daraghmi2022Saga}. Inoltre, la multimodalità richiede che segnali testuali e visivi vengano allineati e fusi correttamente per risolvere riferimenti spaziali nella scena 3D \cite{Sundar2022Multimodal}.
 
-\item \textbf{Latenza e User Experience:}
-   - Utente si aspetta feedback istantaneo su comandi vocali/testuali
-   - Catena AI inference + API calls + rendering 3D deve essere <1-2 secondi
-   - Necessità di comunicazione real-time (WebSocket) invece di polling
+Infine, l'integrazione di componenti distribuiti richiede una rigorosa gestione della sicurezza, in particolare per l'autenticazione cross-system. L'utilizzo di token JWT (JSON Web Token) è lo standard per l'accesso alle risorse, ma la natura stateless di questi strumenti rende complessa la loro revoca immediata in caso di compromissione \cite{Rujichaikul2025Token}. È dunque compito dell'MCP interagire con sistemi di monitoraggio applicativo per rilevare anomalie nei comportamenti, come il token hijacking o tentativi di generazione illecita di credenziali, garantendo l'integrità del canale di comunicazione tra l'intelligenza artificiale e il motore di configurazione \cite{Rujichaikul2025Token}.
 
-\item \textbf{Multimodalità:}
-   - Utente può interagire sia tramite AI che manualmente nel configuratore
-   - Necessità di sincronizzare azioni manuali con contesto AI
-   - Conflitti potenziali: utente modifica manualmente, AI non ne è consapevole
-\end{enumerate}
 
-\paragraph{Sfide Architetturali:}
+%\paragraph{Contributo di Questa Tesi:}
 
-\begin{itemize}
-\item \textbf{Disaccoppiamento:} Configuratore 3D e MCP Server sono sistemi indipendenti, necessità di bridge (SignalR)
-
-\item \textbf{Protocolli Eterogenei:} MCP usa JSON-RPC, Configuratore usa REST, necessità di traduzione
-
-\item \textbf{Autenticazione Cross-System:} JWT token deve essere valido per MarkunoAPI, SignalR e Configuratore
-
-\item \textbf{Error Handling Distribuito:} Failure può avvenire in MCP, SignalR, MarkunoAPI o Configuratore, necessità di propagazione errori end-to-end
-\end{itemize}
-
-\paragraph{Contributo di Questa Tesi:}
-
-Questo lavoro affronta le sfide sopra attraverso:
-\begin{itemize}
-\item Progettazione di un'architettura dual-channel (REST + SignalR) per sincronizzazione real-time
-\item Implementazione di pattern GET-MODIFY-SAVE per operazioni atomiche complesse
-\item Definizione di tool MCP semanticamente ricchi per mapping linguaggio naturale
-\item Gestione robusta errori con partial success e messaggi user-friendly
-\item Validazione end-to-end con 10+ scenari di test
-\end{itemize}
+%Questo lavoro affronta le sfide sopra attraverso:
+%\begin{itemize}
+%\item Progettazione di un'architettura dual-channel (REST + SignalR) per sincronizzazione real-time
+%\item Implementazione di pattern GET-MODIFY-SAVE per operazioni atomiche complesse
+%\item Definizione di tool MCP semanticamente ricchi per mapping linguaggio naturale
+%\item Gestione robusta errori con partial success e messaggi user-friendly
+%\item Validazione end-to-end con 10+ scenari di test
+%\end{itemize}
 %\paragraph{Structure of the Thesis}
-WebSocket è uno standard (\textit{RFC6455}) per comunicazione bidirezionale full-duplex su connessione TCP persistente \cite{gourko_websocket_thesis}. Una volta stabilita (tramite handshake HTTP), client e server possono inviare messaggi in entrambe le direzioni senza chiusure continue, riducendo l’overhead tipico delle richieste HTTP tradizionali. Questo consente aggiornamenti in tempo reale con bassa latenza e alto throughput \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Ad esempio, WebSocket è ampiamente usato in applicazioni chat, giochi online, dashboard finanziari e servizi di localizzazione in cui servono flussi di dati continui \cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}. Altri vantaggi includono il supporto nativo dei browser moderni (nessun plugin aggiuntivo) e la possibilità di inviare dati binari, riducendo i costi di encoding/decoding rispetto a HTTP/1.0. Inoltre, non è necessario ricaricare la pagina o fare polling ripetuto per ricevere nuovi dati.
 
-Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più complessa: ogni connessione richiede risorse di memoria e CPU per rimanere attiva\cite{gourko_websocket_thesis}. In scenari con molti utenti simultanei, questo può diventare un collo di bottiglia di scalabilità. A livello di sicurezza, è necessario usare sempre WSS (WebSocket sicuro) su TLS per cifrare il traffico\cite{gourko_websocket_thesis}\cite{websocket_adoption_www21}; in caso contrario, la connessione rimane vulnerabile a intercettazioni. Gli stessi WebSocket non hanno meccanismi automatici di riconnessione né controllo del flusso; questi devono essere gestiti manualmente dall’applicazione. Infine, aspetti di sicurezza come l’autenticazione e la validazione dell’origin devono essere implementati con attenzione, poiché errori possono esporre a rischi come XSS/CSRF\cite{gourko_websocket_thesis}
-%----------------------------------------------------------------------------------------
-%----------------------------------------------------------------------------------------
 \chapter{Stack Tecnologico}
 \label{chap:stack-tecnologico}
 %----------------------------------------------------------------------------------------
@@ -403,8 +390,6 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %----------------------------------------------------------------------------------------
 \section{Panoramica dello Stack}
 \label{sec:panoramica-stack}
-%----------------------------------------------------------------------------------------
-
 % Contenuti da sviluppare (2 pagine):
 %
 % A) Visione d'insieme dello stack (0.7 pagine):
@@ -429,7 +414,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Configurator3D: SDK SignalR JavaScript per web client
 %
 % Tabella 3.1: Stack Technology Summary (COMPATTA)
-% | Layer          | Tecnologia         | Versione | Motivazione                      |
+% | Layer          | Tecnologia         | Versione | Motivazione
 % |----------------|--------------------|----------|----------------------------------|
 % | Runtime        | .NET               | 8 LTS    | Performance + LTS + ecosistema   |
 % | Language       | C#                 | 12       | Type-safety + async/await        |
@@ -447,15 +432,48 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Pagine stimate: 2
 
-%----------------------------------------------------------------------------------------
+La definizione dell'architettura software per un sistema distribuito che integri capacità di intelligenza artificiale conversazionale con ambienti di configurazione tridimensionale richiede una selezione tecnologica rigorosa. La scelta dello stack non risponde solamente a criteri di popolarità o tendenza, bensì a una precisa strategia ingegneristica con l'obiettivo di garantire robustezza, manutenibilità e prestazioni elevate. L'ecosistema tecnologico adottato per il progetto è stato strutturato secondo una logica a livelli funzionali (\emph{layered architecture}), progettata per disaccoppiare le responsabilità e facilitare l'evoluzione futura del sistema.
+
+Il nucleo dell'infrastruttura di backend è costituito dalla piattaforma .NET 8 \acs{lts}, supportata dal linguaggio C\# 12 e dal framework ASP.NET Core. Questa combinazione rappresenta le fondamenta del sistema, offrendo un ambiente di esecuzione gestito ma altamente performante, capace di supportare sia le logiche di business complesse del protocollo \acs{mcp} sia la gestione concorrente delle connessioni utente. Al di sopra del runtime, il livello di comunicazione agisce come sistema nervoso del progetto. Per soddisfare la necessità di interazioni bidirezionali a bassa latenza, è stato adottato SignalR, una libreria che astrae la complessità dei WebSocket, gestendo automaticamente la negoziazione del trasporto. Parallelamente, l'integrazione con gli agenti \acs{ai} e il protocollo \acs{mcp} sfrutta JSON-RPC 2.0, uno standard leggero per la chiamata di procedure remote, che convive con gli endpoint REST tradizionali utilizzati per operazioni di gestione meno frequenti.
+
+La sicurezza attraversa trasversalmente questi livelli. L'autenticazione è viene gestita tramite lo standard JWT (JSON Web Token, RFC 7519), che permette una verifica dell'identità \emph{stateless}, essenziale per la scalabilità orizzontale. La protezione del trasporto è garantita dalla crittografia TLS (HTTPS/WSS), mentre le politiche CORS regolano l'accesso alle risorse da origini differenti, scenario tipico nelle moderne applicazioni web distribuite. Infine, l'integrazione frontend è realizzata mediante TypeScript 5.x. L'utilizzo del pacchetto \texttt{@microsoft/signalr} permette al client web di instaurare un canale diretto con il server, beneficiando della tipizzazione statica che si estende dal backend al frontend, riducendo drasticamente le possibilità di errore durante lo scambio dei messaggi.
+
+La convergenza verso questo specifico stack tecnologico è il risultato di una valutazione basata su diversi aspetti principali come: modernità, prestazioni, sicurezza dei tipi, maturità dell'ecosistema, interoperabilità e manutenibilità. L'adozione di una versione con supporto a lungo termine come .NET 8, rilasciata tra il 2023 e il 2024, permette di ricevere aggiornamenti di sicurezza per l'intero ciclo di vita del progetto che conferiscono grande stabilità. Sul fronte delle prestazioni, il runtime di .NET ha dimostrato negli ultimi anni miglioramenti significativi nel \emph{throughput} delle richieste e nella gestione della memoria, requisiti imprescindibili per mantenere una latenza inferiore ai 10ms nelle operazioni di sincronizzazione dello stato del configuratore 3D.
+
+Un fattore determinante è la garanzia di type‑safety end‑to‑end dove l'impiego congiunto di C\# lato server e TypeScript lato client permette di condividere definizioni di tipi Data Transfer Objects (DTO), spostando molte classi di errore dal runtime alla fase di compilazione. La maturità dell'ecosistema, librerie consolidate e documentazione esaustiva, riduce i rischi implementativi e accelera lo sviluppo tramite strumenti avanzati quali debugger, profiler, IntelliSense. L'adozione di standard aperti facilita interoperabilità e manutenibilità. La compatibilità nativa di .NET con JSON‑RPC semplifica l'implementazione del Model Context Protocol, mentre pattern consolidati come la Dependency Injection in ASP.NET Core mantengono il codice modulare e testabile.
+
+L'architettura delineata risponde puntualmente alle specifiche funzionali e non funzionali del sistema. Il requisito di interattività in tempo reale per il configuratore 3D trova in SignalR la soluzione ideale: la capacità di inviare notifiche \emph{push} dal server al client permette di aggiornare la scena tridimensionale istantaneamente in risposta alle elaborazioni dell'\acs{ai}, senza costringere il client a costosi meccanismi di polling. Per quanto concerne la scalabilità, l'approccio \emph{stateless} garantito dai token JWT consente al sistema di crescere orizzontalmente senza la necessità di sincronizzare le sessioni utente tra nodi diversi. Inoltre, l'integrazione del \emph{Model Context Protocol} è supportata nativamente dalle capacità di serializzazione JSON e dalla gestione dei trasporti, sia HTTP che stdio, offerte dal framework, semplificando la creazione di strumenti personalizzati per i modelli linguistici.
+
+La tabella \ref{tab:tech-stack-summary} riassume le tecnologie selezionate per ogni livello logico, evidenziando le motivazioni specifiche che ne hanno determinato l'adozione nel contesto di questa tesi.
+
+\begin{table}[ht]
+\centering
+\caption{Sintesi dello Stack Tecnologico e motivazioni di adozione.}
+\label{tab:tech-stack-summary}
+\footnotesize
+\begin{tabular}{@{}p{2.5cm}p{3cm}p{1.5cm}p{6cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Tecnologia} & \textbf{Versione} & \textbf{Motivazione Principale} \\ \midrule
+Runtime & .NET & 8 LTS & Performance elevate, stabilità LTS ed ecosistema maturo \\
+Linguaggio & C\# & 12 & Type-safety robusta e costrutti asincroni moderni \\
+Framework Web & ASP.NET Core & 8.0 & Hosting SignalR integrato e Dependency Injection nativa \\
+Integrazione MCP & MCP .NET SDK & 0.6.0 & Definizione tipizzata dei tool per l'AI \\
+Real-Time Comm. & SignalR & 8.0 & Gestione automatica riconnessioni e fallback dei trasporti \\
+Autenticazione & JWT Bearer & RFC 7519 & Architettura stateless e scalabile per sistemi distribuiti \\
+Sicurezza & CORS & W3C & Abilitazione sicura delle richieste cross-origin dal frontend \\
+Sicurezza Trasp. & HTTPS/WSS & TLS 1.3 & Cifratura end-to-end del canale di comunicazione \\
+Linguaggio Front. & TypeScript & 5.x & Coerenza dei tipi con il backend e supporto IntelliSense \\
+SDK Frontend & @microsoft/signalr & 8.x & Client leggero per la gestione eventi real-time nel browser \\ \bottomrule
+\end{tabular}
+\end{table}
+
 \section{Piattaforma Backend .NET}
 \label{sec:backend-net}
-%----------------------------------------------------------------------------------------
+
 
 % FOCUS: Panoramica essenziale .NET 8, C# 12, ASP.NET Core, MCP SDK
 % Approccio: COMPATTO, spiegare COSA/PERCHÉ, NO dettagli implementativi
 
-%----------------------------------------------------------------------------------------
 \subsection{.NET 8 e C\# 12: Piattaforma e Linguaggio}
 \label{subsec:dotnet-csharp}
 %----------------------------------------------------------------------------------------
@@ -503,11 +521,26 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Tabella 3.2: Comparison matrix (4×4)
 %
 % Pagine stimate: 1.5
+L'adozione della piattaforma .NET 8 si colloca all'interno di un ecosistema software maturo, unificato e altamente ottimizzato \cite{Cvijić2024NET8}. Dopo aver superato la storica separazione tra il framework proprietario orientato a Windows e le prime versioni modulari di \textit{.NET Core}, Microsoft ha avviato con .NET 5 un percorso di convergenza architetturale, giunto a compimento nel novembre 2023 con il rilascio della versione 8, dotata di supporto a lungo termine (LTS) \cite{Toub2023Performance, Cvijić2024NET8}. Questa evoluzione ha trasformato .NET in una soluzione interamente \textit{open-source} e \textit{cross-platform}, progettata nativamente per operare con la medesima efficacia su ambienti Windows, Linux e macOS.
 
-%----------------------------------------------------------------------------------------
+ La forte efficienza di questo stack tecnologico risiede nei componenti avanzati come il CoreCLR e il \textit{Garbage Collector} (GC). Il runtime implementa strategie di compilazione sofisticate. il compilatore Just-In-Time (JIT) sfrutta la \textit{Dynamic Profile-Guided Optimization} (PGO) e la \textit{Tiered Compilation} per adattare l'esecuzione del codice in base ai dati raccolti in tempo reale, minimizzando l'overhead e massimizzando il throughput \cite{Toub2023Performance}. Parallelamente, il GC è stato oggetto di continue ottimizzazioni mirate alla riduzione dei tempi di pausa, fattore determinante per sostenere carichi di lavoro ad alta concorrenza tipici delle moderne applicazioni web basate su ASP.NET Core \cite{Toub2023Performance}.
+
+Inoltre, il linguaggio C\# 12 offre un'interfaccia espressiva, orientata agli oggetti e rigorosamente \textit{type-safe} \cite{Microsoft2024C12} stabilendo una stretta sinergia con il runtime. Le innovazioni introdotte in questa versione mirano a unire la sinteticità del codice con la sicurezza e le prestazioni. L'estensione dei Primary Constructors a classi e struct, unitamente alle Collection Expressions, permette di ridurre drasticamente il codice \textit{boilerplate} necessario per la definizione di tipi e l'inizializzazione delle strutture dati \cite{Microsoft2024C12}. Sul fronte dell'ottimizzazione, l'introduzione degli Inline Arrays e dei parametri \texttt{ref readonly} consente agli sviluppatori di gestire buffer a dimensione fissa e passaggi di riferimento in sola lettura con efficienza paragonabile a contesti \textit{unsafe}, ma mantenendo le garanzie di sicurezza della memoria gestita \cite{Toub2023Performance, Microsoft2024C12}.
+
+La scelta di combinare .NET 8 e C\# 12 risponde a precisi requisiti di scalabilità e manutenibilità. Il supporto nativo al paradigma asincrono, tramite i costrutti \texttt{async/await}, e l'integrazione di LINQ (\textit{Language Integrated Query}) offrono un modello ergonomico per la gestione dell'I/O non bloccante e delle interrogazioni in-memory, evitando complessità sintattiche e favorendo la pulizia del codice \cite{Microsoft2024C12}.
+
+Sotto il profilo prestazionale, i benchmark evidenziano miglioramenti significativi nelle operazioni \textit{compute-intensive}, come l'hashing crittografico, e una riduzione delle allocazioni di memoria nei percorsi critici \cite{Toub2023Performance}. Tale efficienza, unita alla robustezza del sistema di tipi che previene intere classi di errori a tempo di compilazione \cite{Microsoft2024C12}, rende la piattaforma superiore rispetto ad alternative interpretate per scenari real-time. Infine, la maturità dell'ecosistema, supportata dal gestore di pacchetti NuGet e dalla piena compatibilità con la containerizzazione Docker, garantisce un ciclo di sviluppo e rilascio affidabile, essenziale per l'integrazione di librerie complesse come gli SDK per protocolli distribuiti \cite{Cvijić2024NET8}.
+
 \subsection{ASP.NET Core: Infrastructure Framework}
 \label{subsec:aspnet-core}
-%----------------------------------------------------------------------------------------
+
+ASP.NET Core rappresenta l'evoluzione open-source, multipiattaforma e ad alte prestazioni del framework web di Microsoft, progettato per rispondere alle esigenze di scalabilità delle moderne architetture cloud-native \cite{aspnetcore_overview, rao_jain_tyagi_enhancing}. Distaccandosi radicalmente dal precedente ASP.NET, questa versione propone una riprogettazione strutturale con lo scopo di fornire una piattaforma unificata e leggera \cite{kronis_uhanaova_performance}, in grado di sostenere lo sviluppo di sistemi distribuiti complessi e di gestire carichi di lavoro enterprise con efficienza elevata \cite{aspnetcore_overview, jakkula_gollapudi_jaiswal_microservices}.
+
+L'architettura del framework è intrinsecamente modulare, caratteristica che consente di ridurre l'overhead operativo includendo nel processo solo i componenti strettamente necessari \cite{rao_jain_tyagi_enhancing}. Elemento centrale di questo design è la pipeline di gestione delle richieste HTTP, realizzata tramite middleware configurabili che intercettano e processano il traffico per implementare logiche trasversali come il logging e l'autenticazione \cite{aspnetcore_overview, jakkula_gollapudi_jaiswal_microservices}. A livello di hosting, il sistema si avvale di Kestrel, un server web leggero e ottimizzato per l'esecuzione cross-platform, che supera la dipendenza storica da IIS garantendo prestazioni elevate anche in ambienti non Windows \cite{aspnetcore_overview, kronis_uhanaova_performance}. La robustezza dell'infrastruttura è ulteriormente assicurata dal supporto nativo per la dependency injection (DI), un pattern essenziale per favorire il disaccoppiamento dei componenti, la testabilità del codice e la manutenibilità a lungo termine \cite{aspnetcore_overview, rao_jain_tyagi_enhancing}.
+
+ASP.NET Core si distingue perché il suo runtime è più leggero e richiede meno memoria, caratteristiche che lo rendono molto veloce nell'elaborare le richieste secondo diversi benchmark del settore \cite{rao_jain_tyagi_enhancing, kronis_uhanaova_performance}. Anche se componenti relativamente nuovi come il server Kestrel possono necessitare di tempo per essere pienamente consolidati, l'affidabilità dell'intero framework è dimostrata dall'uso su larga scala in servizi critici come Bing, Xbox e Azure \cite{aspnetcore_overview, kronis_uhanaova_performance}. Per questi motivi, ASP.NET Core è una scelta appropriata quando si progettano applicazioni che devono garantire sia buone prestazioni sia stabilità operativa \cite{aspnetcore_overview, rao_jain_tyagi_enhancing}.
+
+Nel progetto ASP.NET Core è usato principalmente come infrastruttura interna, non come host principale delle API REST. Il framework viene impiegato per orchestrare i servizi interni tramite il contenitore per la dependency injection e per gestire funzionalità trasversali importanti come la configurazione basata sull’ambiente, il tracciamento (tracing) e il logging strutturato delle metriche di runtime \cite{aspnetcore_overview, rao_jain_tyagi_enhancing}. Inoltre, il server Kestrel è efficiente e viene usato per ospitare il componente SignalR di SignalrHub, permettendo comunicazioni real-time fluide e reattive, utili per l’interattività dell’applicazione \cite{aspnetcore_overview}.
 
 % Contenuti da sviluppare (1 pagina):
 %
@@ -529,8 +562,6 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %   * SignalR hosting: Kestrel espone IwineHub
 %
 % Pagine stimate: 1
-
-%----------------------------------------------------------------------------------------
 \subsection{MCP SDK: Astrazione Tool Definition}
 \label{subsec:mcp-sdk}
 %----------------------------------------------------------------------------------------
@@ -563,8 +594,16 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Diagramma 3.3: MCP SDK workflow (AI → JSON-RPC → SDK → method)
 %
 % Pagine stimate: 1
+Il Model Context Protocol (MCP) si configura come uno standard aperto e ampiamente adottato, progettato per razionalizzare l'architettura dei sistemi basati su intelligenza artificiale generativa e facilitare l'integrazione tra i diversi componenti software. La sua funzione primaria è quella di definire uno schema rigoroso per strutturare le interazioni tra client e server, standardizzando le chiamate API verso i Large Language Models (LLM), le sorgenti dati e gli strumenti agentici, riducendo così significativamente i costi e la complessità dello sviluppo \cite{Radosevich2025MCPSafetyAudit, mcp_survey_kent}.
 
-%----------------------------------------------------------------------------------------
+Per permettere l'uso del protocollo in diversi ambienti di sviluppo, sono stati rilasciati SDK open-source per i principali linguaggi di programmazione, tra cui Python, Java, TypeScript e Kotlin \cite{Radosevich2025MCPSafetyAudit}. Nel contesto specifico di questo progetto, sviluppato in ambiente Microsoft, la componente tecnologica centrale è rappresentata dall'SDK ufficiale C\# per MCP, mantenuto in stretta collaborazione con Microsoft \cite{ModelContextProtocol2025CSDK}. Questo strumento, distribuito tramite il pacchetto NuGet \textbf{\texttt{ModelContextProtocol}}, funge da framework per l'implementazione di server MCP all'interno di applicazioni e librerie .NET, offrendo le estensioni necessarie per l'hosting e l'injection delle dipendenze \cite{ModelContextProtocol2025CSDK}. La libreria è ideale per progetti che non hanno bisogno di un server HTTP completo. Si basa sulla classe \textbf{\texttt{McpServer}}, configurabile sia in modo esplicito che usando i pattern standard di .NET \cite{ModelContextProtocol2025CSDK}.
+
+Sebbene la comunicazione sottostante sia gesttita semanticamente dallo standard \textbf{JSON-RPC 2.0} \cite{mcp_survey_kent, Ahmadi2025MCPBridge}, l'SDK opera una completa astrazione di tale complessità, privilegiando lo \textbf{\texttt{stdio}} (Standard Input/Output) come canale di trasporto primario \cite{Ahmadi2025MCPBridge, mcp_survey_kent, ModelContextProtocol2025CSDK}.Le funzionalità del server vengon esposte tramite un paradigma dichiarativo basato su attributi. Le classi contenenti la logica dei tool vengono marcate con \texttt{[McpServerToolType]}, mentre i singoli metodi che l'LLM dovrà invocare sono decorati con \textbf{\texttt{[McpServerTool]}} \cite{ModelContextProtocol2025CSDK}. Per garantire che il modello comprenda correttamente la semantica degli strumenti, è essenziale fornire metadati descrittivi sia ai metodi che ai parametri tramite l'attributo \texttt{[Description]} del namespace \texttt{System.ComponentModel} \cite{ModelContextProtocol2025CSDK}.
+
+L'adozione di questo SDK è giustificata da un'analisi comparativa rispetto all'implementazione manuale del protocollo, dalla quale emerge un netto miglioramento nella \textit{developer experience} e nella sicurezza del codice. Gestire manualmente il protocollo JSON-RPC imporrebbe allo sviluppatore l'obbligo di implementare parser complessi, validare gli schemi di input, gestire il routing delle chiamate e serializzare le risposte, oltre a dover sollevare eccezioni specifiche come \texttt{McpErrorCode.InvalidParams} in caso di errori \cite{ModelContextProtocol2025CSDK}. Al contrario, l'approccio gestito dall'SDK automatizza interamente il parsing e la validazione rispetto ai tipi forti di C\#, eliminando la necessità di manipolare oggetti non tipizzati e riducendo drasticamente il codice \textit{boilerplate} necessario \cite{ModelContextProtocol2025CSDK}. Procedendo in questo modo si garantisce ub \textit{type-safety} superiore e permettendo allo sviluppatore di concentrarsi sullo sviluppo sulla logica di business piuttosto che sull'infrastruttura di comunicazione.
+
+Nel flusso di lavoro del progetto, l'SDK agisce come giuntura tra la logica applicativa C\# e le capacità decisionali dell'agente AI. Il processo segue uno schema rigido dove a seguito dell'input utente, l'LLM elabora una richiesta strutturata che viene trasmessa via JSON-RPC \cite{Wang2025MCPBench, mcp_survey_kent}. Il server intercetta tale richiesta, trasforma il payload negli argomenti tipizzati e invoca il metodo C\# corrispondente \cite{ModelContextProtocol2025CSDK, Wang2025MCPBench}. È rilevante notare che l'architettura supporta anche flussi bidirezionali o ricorsivi: l'istanza di \texttt{McpServer} può essere utilizzata per richiamare il client (il contesto LLM) per operazioni di \textit{sampling}, come dimostrato da funzioni che necessitano di generare sintesi di contenuti scaricati interagendo nuovamente con il modello \cite{ModelContextProtocol2025CSDK}.
+
 \section{Architettura della Comunicazione}
 \label{sec:comunicazione}
 %----------------------------------------------------------------------------------------
@@ -572,10 +611,8 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % FOCUS: Protocolli comunicazione client-server
 % Approccio: COMPATTO per protocolli base, DETTAGLIATO per SignalR
 
-%----------------------------------------------------------------------------------------
 \subsection{Protocolli di Base: REST, JSON-RPC, WebSocket}
 \label{subsec:protocolli-base}
-%----------------------------------------------------------------------------------------
 
 % Contenuti da sviluppare (1.5 pagine - UNISCE 3 protocolli):
 %
@@ -614,13 +651,50 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Tabella 3.3: Polling vs WebSocket (4×2)
 %
 % Pagine stimate: 1.5
+L'architettura del sistema si fonda su tre standard di comunicazione distinti ma complementari: REST, JSON-RPC 2.0 e WebSocket. Ognuno di questi protocolli risponde a specifiche esigenze architetturali, dalla gestione delle risorse \emph{stateless} alla chiamata di procedure remote, fino alla comunicazione in tempo reale e la loro cooperazione integrata risulta fondamentale per il corretto funzionamento dell’intera piattaforma.
+\subsubsection{REST: Lo Standard per le Risorse Web}
 
-%----------------------------------------------------------------------------------------
-\subsection{SignalR: Framework Real-Time}
-\label{subsec:signalr-framework}
-%----------------------------------------------------------------------------------------
+Il \textbf{REpresentational State Transfer (REST)} costituisce lo stile architetturale di riferimento per l'esposizione di interfacce web scalabili e interoperabili \cite{yasmin_first_2008}. Definito originariamente da Roy Fielding nel 2000, non si configura come una semplice raccolta di pattern, bensì come un insieme organico di vincoli progettuali mirati a ottimizzare scalabilità, efficienza e affidabilità dei sistemi distribuiti \cite{bogner_restruler_2024}.
 
-% Contenuti da sviluppare (3 pagine - RIDOTTA da 4.5):
+L’architettura si fonda sul protocollo HTTP e sul paradigma di comunicazione stateless: ogni richiesta ha con se i dati indispensabili alla sua elaborazione, liberando il server dal compito di gestire uno stato persistente per il client \cite{bogner_restruler_2024}. Tale approccio orientato alle risorse identifica ogni entità tramite un URI (\emph{Uniform Resource Identifier}) univoco e ne permette la manipolazione attraverso rappresentazioni standardizzate, tipicamente in formato JSON \cite{yasmin_first_2008, bogner_restruler_2024}.
+
+"Un punto importante del modello REST è l’uso dei verbi HTTP con un significato preciso: \textbf{GET} serve per leggere in modo sicuro e ripetibile le informazioni, \textbf{POST} per aggiungere nuove risorse, e \textbf{DELETE} per cancellarle. Usare correttamente questi verbi è fondamentale per garantire che l’interfaccia funzioni nel modo giusto \cite{bogner_restruler_2024}. La diffusione capillare di questo standard, cresciuta esponenzialmente nell'ultimo decennio, è sostenuta anche dalla gestione efficiente del \emph{caching}, che riduce il carico computazionale evitando la rigenerazione di risposte identiche \cite{yasmin_first_2008}.
+
+Nel contesto progettuale, il servizio API esterno adotta questo paradigma per esporre endpoint transazionali quali \texttt{POST /muconf/plist} o \texttt{/pcreate}. Tuttavia, il modello REST presenta un limite strutturale intrinseco: essendo basato su un ciclo \emph{request-response} sincrono, non supporta nativamente il \emph{server push}, risultando inadeguato per scenari che richiedono aggiornamenti bidirezionali in tempo reale, come le notifiche istantanee \cite{mongoose_json-rpc_ws}.
+
+\subsubsection{JSON-RPC 2.0: Semplicità nella Chiamata Remota}
+
+Per la gestione delle interazioni procedurali complesse, il sistema adotta \textbf{JSON-RPC 2.0}, un protocollo \emph{stateless} e leggero specificato nel 2010 per l'invocazione di metodi remoti (RPC) \cite{json-rpc_spec}.A differenza di protocolli più complessi come SOAP, JSON-RPC utilizza la sintassi leggera di JSON per definire lo scambio di messaggi, indipendentemente dal livello di trasporto usato (HTTP, socket o stdio) \cite{json-rpc_spec}.
+
+La struttura del protocollo è rigorosa ma minimale. Una richiesta valida deve includere la versione del protocollo (\texttt{"jsonrpc": "2.0"}), il nome del metodo (\texttt{method}), gli eventuali parametri (\texttt{params}) e un identificativo (\texttt{id}) necessario per collegare la risposta \cite{json-rpc_spec}. L'omissione dell'identificativo trasforma la chiamata in una \emph{Notification}, per la quale il server non è tenuto a inviare alcuna risposta, ottimizzando il traffico di rete \cite{json-rpc_spec, mongoose_json-rpc_ws}. Le risposte, a loro volta, devono restituire un risultato (\texttt{result}) o un oggetto di errore strutturato (\texttt{error}) contenente codice e messaggio descrittivo \cite{json-rpc_spec}.
+
+La scelta di JSON-RPC 2.0 è motivata dalla sua capacità di supportare comunicazioni bidirezionali asincrone mantenendo una semplicità implementativa estrema \cite{mongoose_json-rpc_ws}. Nel progetto, esso costituisce la spina dorsale del \emph{Model Context Protocol} (MCP), veicolando comandi critici come \texttt{initialize} o \texttt{tools/call}. L'utilizzo di un SDK dedicato permette di astrarre interamente le operazioni di \emph{parsing} e serializzazione, garantendo la conformità alla specifica senza dispensiosi compiti per lo sviluppatore \cite{mongoose_json-rpc_ws}.
+
+\subsubsection{WebSocket: Canale Full-Duplex Real-Time}
+
+Mentre REST e JSON-RPC gestiscono efficacemente le interazioni basate su richiesta, l'architettura necessita di un canale dedicato per la trasmissione di eventi asincroni a bassa latenza. A tale scopo viene adottato il protocollo \textbf{WebSocket}, che permette di instaurare un tunnel di comunicazione \textbf{full-duplex} persistente su una singola connessione TCP, superando i limiti strutturali del modello HTTP tradizionale \cite{mongoose_json-rpc_ws}.
+
+L'impiego di WebSocket è giustificato dalla necessità di eliminare l'inefficienza delle tecniche di \textit{polling}. Mantenendo il canale aperto, il server può trasmettere dati al client istantaneamente (approccio \textit{push}) senza l'overhead di negoziare una nuova connessione per ogni messaggio. Come evidenziato nella Tabella \ref{tab:polling-vs-websocket}, questo approccio riduce drasticamente la latenza e il consumo di banda rispetto alle alternative basate su interrogazione periodica.
+
+\begin{table}[ht]
+\centering
+\caption{Confronto prestazionale: HTTP Polling vs WebSocket.}
+\label{tab:polling-vs-websocket}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Metrica} & \textbf{Short Polling} & \textbf{WebSocket} \\
+\midrule
+Latenza & Alta (1-5 sec) & Bassissima ($<$10 ms) \\
+Overhead & Alto (Header HTTP completi) & Minimo (Frame leggeri) \\
+Carico Server & Elevato (Connessioni multiple) & Basso (Connessione persistente) \\
+Scalabilità & Limitata & Elevata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tuttavia, la gestione "grezza" di un socket persistente introduce complessità infrastrutturali, quali la gestione delle disconnessioni impreviste e l'attraversamento di proxy restrittivi. Per tale motivo, nel progetto l'utilizzo di WebSocket non avviene in forma diretta, ma è mediato dalla libreria \textbf{SignalR}, che astrae queste complessità garantendo meccanismi di \textit{fallback} e riconnessione automatica, come verrà dettagliato nel capitolo dedicato alle tecnologie \textit{real-time}.
+% Contenuti da sviluppare (3 pagine):
 %
 % A) COSA è SignalR (0.8 pagine):
 % - Libreria ASP.NET Core per comunicazione real-time client-server
@@ -681,8 +755,69 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Diagramma 3.4: Dual-Channel pattern (MCP → REST + SignalR → Configurator)
 %
 % Pagine stimate: 3
+\subsection{SignalR: Framework Real-Time}
+\label{subsec:signalr-framework}
 
-%----------------------------------------------------------------------------------------
+L'evoluzione dei sistemi distribuiti verso architetture reattive impone l'adozione di strumenti capaci di garantire una comunicazione a bassa latenza e alta affidabilità. Per rispondere a tale esigenza, l'architettura del progetto integra \textbf{SignalR}, una libreria open-source dell'ecosistema ASP.NET Core progettata per astrarre la complessità della comunicazione bidirezionale tra server e client \cite{integrating_signalr_dotnet}. Il framework non segue il tradizionale modello \emph{request-response} di HTTP, abilitando un meccanismo di \emph{server push} che permette l'aggiornamento istantaneo delle interfacce client senza ricorrere a tecniche inefficienti di polling \cite{Medavarapu2022, microsoft_signalr_docs}.
+
+\bigskip
+\noindent \textbf{Architettura e Astrazione del Trasporto.}
+SignalR opera come un livello di astrazione ad alto livello costruito sopra i protocolli di trasporto sottostanti. Il componente fondamentale è il \textbf{Transport Layer}, che gestisce la negoziazione della connessione implementando una logica di \emph{fallback} automatico \cite{Comparison2024}. Il framework tenta inizialmente di stabilire una connessione via \textbf{WebSocket}, considerato il trasporto preferenziale per le sue caratteristiche \emph{full-duplex}.
+
+Qualora l'ambiente di rete (proxy, firewall) o le capacità del client non lo supportino, SignalR degrada in modo trasparente verso \textbf{Server-Sent Events (SSE)} e, in ultima istanza, verso il \textbf{Long Polling} \cite{integrating_signalr_dotnet, microsoft_signalr_docs}.
+Il modello di programmazione si basa sul \textbf{Hub Pattern}, che funge da pipeline centrale per lo scambio di messaggi. Gli Hub permettono di invocare metodi sul client come se fossero locali, supportando diverse topologie di distribuzione: dal \emph{broadcasting} globale (tramite \texttt{Clients.All}) all'indirizzamento \emph{unicast} verso connessioni specifiche (\texttt{Clients.Client(id)}) \cite{Comparison2024, integrating_signalr_dotnet}. Per garantire la robustezza del codice, l'architettura sfrutta \textbf{Strongly-typed Hubs} basati sull'interfaccia generica \texttt{Hub<T>}, che assicurano la verifica dei tipi a tempo di compilazione (\emph{compile-time safety}), prevenendo errori di invocazione comuni nei sistemi basati su stringhe magiche \cite{integrating_signalr_dotnet}.
+Un aspetto critico per la resilienza del sistema è la gestione del ciclo di vita della connessione. SignalR espone hook di eventi quali \texttt{OnConnectedAsync} e \texttt{OnDisconnectedAsync} per la gestione delle risorse e implementa una politica di \textbf{riconnessione automatica} configurabile. Nel progetto, è stata adottata una strategia di \emph{retry} con backoff incrementale a 0, 2, 5 e 10 secondi, permettendo il recupero trasparente della sessione in caso di instabilità transitoria della rete \cite{Comparison2024}.
+
+\bigskip
+\noindent \textbf{Vantaggi Operativi e Produttività.}
+La scelta di adottare SignalR in luogo di un'implementazione diretta di WebSocket (\emph{raw WebSocket}) è giustificata da un'analisi costi-benefici legata alla produttività e alla manutenibilità. Mentre WebSocket fornisce un canale di comunicazione grezzo, il suo utilizzo diretto imporrebbe agli sviluppatori di re-implementare funzionalità infrastrutturali complesse. SignalR riduce drasticamente il codice \emph{boilerplate} necessario, stimato in una riduzione del 90\%, gestendo internamente la serializzazione dei messaggi, il routing e la gestione degli errori \cite{integrating_signalr_dotnet}.
+La Tabella \ref{tab:websocket-vs-signalr} evidenzia le differenze strutturali tra le due tecnologie, sottolineando come SignalR risolva nativamente le criticità legate alla gestione manuale del protocollo.
+
+\begin{table}[ht]
+\centering
+\caption{Confronto tecnico: WebSocket Raw vs SignalR.}
+\label{tab:websocket-vs-signalr}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Aspetto} & \textbf{WebSocket Raw} & \textbf{SignalR} \\ \midrule
+Fallback & Manuale & Automatico (SSE $\to$ LP) \\
+Riconnessione & Custom (logica complessa) & Automatica con backoff \\
+Messaggistica & Serializzazione manuale & Metodi Strongly-typed \\
+Broadcasting & Loop manuale sulle socket & \texttt{Clients.All.Method()} \\
+Complessità & Elevata (300-500 righe) & Minima (20-30 righe) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Oltre all'efficienza del codice, l'adozione del framework migliora significativamente la \emph{Developer Experience} (DX) grazie all'integrazione con IntelliSense e alla sicurezza dei tipi offerta dall'ecosistema .NET, riducendo la superficie di errore durante lo sviluppo di funzionalità real-time \cite{Comparison2024}.
+
+\bigskip
+\noindent \textbf{Ruolo nell'Architettura di Progetto: SignalRHub .}
+Nell'architettura del progetto di tesi, SignalR non è un semplice accessorio ma costituisce la colonna portante per l'interattività. Il componente centrale è identificato come \textbf{SignalRHub}, un Hub esterno preesistente ospitato sul server Kestrel (porta 7193), configurato con autenticazione JWT e policy CORS permissive per accettare connessioni dai client distribuiti \cite{integrating_signalr_dotnet}.
+
+Il sistema implementa un \textbf{Dual-Channel Pattern}, separando logicamente le responsabilità di comunicazione:
+\begin{enumerate}
+    \item \textbf{Canale REST:} Utilizzato per operazioni CRUD pesanti e transazionali.
+    \item \textbf{Canale SignalR:} Dedicato a notifiche leggere e aggiornamenti di stato in tempo reale.
+\end{enumerate}
+Questa separazione garantisce la resilienza del sistema e una chiara \emph{separation of concerns}. SignalRHub agisce da ponte (\emph{bridging}) tra due componenti principali:
+
+\textbf{1. SignalR Client .NET (Lato MCP Server):}
+Il server MCP utilizza il pacchetto \texttt{Microsoft.AspNetCore.SignalR.Client} per stabilire una connessione persistente con l'Hub tramite il metodo \texttt{StartAsync()}. Il client sottoscrive eventi specifici tramite \texttt{On<T>} per reagire ai comandi e utilizza \texttt{InvokeAsync} per inviare risultati o notifiche di stato, sfruttando la politica di riconnessione automatica (0-10s) per garantire la continuità operativa anche in caso di riavvio dell'Hub.
+
+\textbf{2. SignalR Client Browser (Lato Configurator3D):}
+Il frontend, basato sul pacchetto npm \texttt{@microsoft/signalr} v8.x, gestisce la visualizzazione dinamica. I gestori di eventi, come \texttt{on("open")} o \texttt{on("create")}, intercettano i comandi provenienti dal server MCP. Per garantire la coerenza distribuita, è stato implementato un \textbf{ACK pattern} indispensabile per la corretta elaborazione di un comando. Il client invoca il metodo \texttt{invoke("SendAck", commandId)}, confermando l'avvenuta ricezione ed esecuzione dell'operazione.
+
+\bigskip
+\noindent \textbf{Caratteristiche Determinanti per la Scelta.}
+I fattori che hanno guidato la decisione di integrare SignaIR nell'architettura del progetto sono più di uno e rispondono a requisiti non funzionali critici:
+\begin{itemize}
+    \item \textbf{Bidirezionalità Real-Time:} La capacità di mantenere una latenza inferiore ai 10ms, contro gli 1-5 secondi tipici del polling, è essenziale per la fluidità del configuratore 3D.
+    \item \textbf{Affidabilità:} La gestione automatica delle riconnessioni assicura la stabilità delle sessioni utente di lunga durata.
+    \item \textbf{Fallback Transport:} La garanzia di compatibilità al 100\% in ambienti di rete restrittivi elimina i rischi di disservizio lato client.
+    \item \textbf{Maturità dell'Ecosistema:} Il supporto LTS di Microsoft e la natura \emph{production-ready} della libreria offrono garanzie di manutenibilità a lungo termine \cite{microsoft_signalr_docs, integrating_signalr_dotnet}.
+\end{itemize}
+
 \section{Sicurezza Applicativa}
 \label{sec:sicurezza}
 %----------------------------------------------------------------------------------------
@@ -735,7 +870,31 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Pagine stimate: 1.5
 
-%----------------------------------------------------------------------------------------
+La sicurezza delle moderne architetture a microservizi richiede meccanismi di autenticazione che garantiscano scalabilità e disaccoppiamento. Per questo lavoro si adotta il formato JSON Web Token (JWT), definito dalla RFC 7519 \cite{rfc7519_jwt}, per rappresentare in modo compatto e sicuro le asserzioni (claims) scambiate tra le parti comunicanti. Dal punto di vista strutturale, il token si presenta come una stringa codificata in Base64Url, suddivisa in tre segmenti distinti separati da un punto, i componenti sono: \textit{Header}, \textit{Payload} e \textit{Signature}.
+L'\textbf{Header} definisce i metadati crittografici, specificando l'algoritmo di firma (es. \texttt{\{"alg": "HS256", "typ": "JWT"\}}), mentre il \textbf{Payload} incapsula le asserzioni vere e proprie. Queste includono claim standard registrati come il soggetto (\texttt{sub}), la scadenza (\texttt{exp}) e dati applicativi personalizzati, rendendo il token un oggetto informativo autosufficiente. La \textbf{Signature}, infine, è ottenuta applicando l'algoritmo specificato (come HMACSHA256) alla concatenazione di header e payload codificati, utilizzando una chiave segreta nota solo al server. Questo meccanismo permette al ricevente di verificare l'integrità del dato e l'autenticità dell'emittente ricalcolando la firma al momento della ricezione \cite{rfc7519_jwt, shingala_jwt_mqtt}.
+
+La decisione di adottare JWT invece delle sessioni server-side è motivata da chiari vantaggi per i sistemi distribuiti infatti essendo stateless, i JWT rimuovono la necessità di sincronizzare lo stato delle sessioni tra nodi o di interrogare un database centralizzato ad ogni richiesta HTTP, favorendo una scalabilità orizzontale più semplice (vedi Tabella \ref{tab:session-vs-jwt}) \cite{lee_stateless_rest, obinna_jwt_cloud}.
+
+\begin{table}[ht]
+\centering
+\caption{Confronto: Session-based Auth vs JWT.}
+\label{tab:session-vs-jwt}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Aspetto} & \textbf{Session-based} & \textbf{JWT} \\ \midrule
+Stato & Stateful (Server-side) & Stateless (Client-side) \\
+Storage & Memoria Server / Redis & Client (LocalStorage/Cookie) \\
+Scalabilità & Limitata (Sticky Sessions) & Elevata (Horizontal Scaling) \\
+CSRF & Vulnerabile & Generalmente Immune \\
+Cross-domain & Problematico & Semplice (CORS-friendly) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Essendo \textbf{self-contained}, il token trasporta già tutte le informazioni necessarie per l'autorizzazione, riducendo la latenza di rete e il carico sui database. Inoltre, la natura standardizzata del formato JSON facilita l'interoperabilità \emph{cross-domain}, superando le restrizioni tipiche dei cookie in scenari CORS (\emph{Cross-Origin Resource Sharing}) complessi \cite{obinna_jwt_cloud}.
+
+Il flusso di autenticazione prevede che il \textbf{servizio API esterno} agisca come \emph{Identity Provider}. Dopo una richiesta di login valida (\texttt{POST /api/login}), il server emette un JWT firmato contenente i claim dell'utente. Il client, rappresentato dall'\textbf{MCP Server}, riceve il token e lo include nell'header \texttt{Authorization} di tutte le richieste successive, usando lo schema standard \texttt{Bearer <token>}. Alla ricezione, il servizio API esterno verifica soltanto la firma crittografica e il campo di scadenza (\texttt{exp}), senza consultare tabelle di sessione. Per ridurre i rischi legati alla memorizzazione lato client, il sistema richiede l'uso esclusivo di canali cifrati HTTPS e adotta finestre di validità brevi (15–30 minuti), minimizzando l'impatto di un eventuale furto del token \cite{shingala_jwt_mqtt, rfc7519_jwt}.
+
 \subsection{CORS e Transport Security}
 \label{subsec:cors-https}
 %----------------------------------------------------------------------------------------
@@ -769,7 +928,25 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Pagine stimate: 1
 
-%----------------------------------------------------------------------------------------
+Quando frontend e backend risiedono su domini o porte diverse, è necessario abilitare Cross‑Origin Resource Sharing (CORS) per il controllo degli accessi e utilizzare TLS per cifrare le comunicazioni tra il client di configurazione 3D e l'hub di backend.
+
+La sicurezza dei browser impone nativamente la \textit{Same-Origin Policy} (SOP), una misura difensiva che impedisce a uno script caricato da un'origine (definita dalla combinazione di protocollo, dominio e porta) di interagire con risorse provenienti da un'origine diversa \cite{mdncors}. Tale restrizione, sebbene fondamentale per prevenire attacchi di tipo CSRF (\textit{Cross-Site Request Forgery}), rappresenta un ostacolo tecnico nello scenario implementativo del progetto. Il frontend dell'applicazione è ospitato su un sottodominio dedicato (es. \url{https://app.dominio.com}), mentre il backend, che espone gli endpoint REST e l'hub SignalR, risponde su un indirizzo differente o su una porta specifica (es. \url{https://api.dominio.com:7193}). Essendo differenti l'origine e la porta di comunicazione, il browser classifica le richieste come \textit{cross-origin}, bloccando di default l'instaurazione della connessione WebSocket necessaria per la comunicazione in tempo reale.
+
+Per far si che questa limitazione non impatti eccessivamente la sicurezza dell'applicazione, è stato configurato il middleware CORS lato server. Il protocollo CORS consente al backend di dichiarare esplicitamente quali origini sono autorizzate ad accedere alle risorse tramite l'invio di specifici header HTTP \cite{w3ccors}. Quando il browser rileva una richiesta verso un dominio esterno che potrebbe comportare effetti collaterali sui dati utente, avvia in modo precauzionale una "Preflight request" utilizzando il metodo HTTP \texttt{OPTIONS}. Come illustrato nel Diagramma \ref{fig:cors-flow}, il server risponde a questa richiesta preliminare specificando i metodi consentiti e, crucialmente, l'header \texttt{Access-Control-Allow-Origin}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/cors_flow.png}
+    \caption{Diagramma di sequenza del flusso CORS Preflight tra Frontend e Backend. Il server autorizza esplicitamente l'origine e l'uso delle credenziali prima della connessione WebSocket.}
+    \label{fig:cors-flow}
+\end{figure}
+
+Nel caso specifico della comunicazione real-time con SignalR, la configurazione si complica maggiormente in quanto vi è la necessità di trasmettere credenziali di autenticazione (cookie o header di autorizzazione). La specifica CORS impone che, quando le credenziali sono coinvolte, il server non possa utilizzare il carattere jolly (\texttt{*}) per l'origine, ma debba restituire l'esatto dominio del chiamante e includere l'header \texttt{Access-Control-Allow\-Credentials: true} \cite{mdncors}. L'assenza di tale configurazione provocherebbe il fallimento immediato dell'handshake WebSocket inizializzato dal client.
+
+Parallelamente al controllo degli accessi, la confidenzialità e l'integrità dei dati in transito sono garantite dall'adozione del protocollo \textit{Transport Layer Security} (TLS), su cui si basano HTTPS (\textit{HyperText Transfer Protocol Secure}) e WSS (\textit{WebSocket Secure}). L'intero traffico tra il configuratore 3D e le API di backend avviene esclusivamente su canale cifrato, utilizzando prevalentemente lo standard TLS 1.3. La nuova versione del protocollo riduce la latenza durante l'handshake e rimuove algoritmi crittografici obsoleti, limitando la possibilità di sorveglianza del traffico \cite{carnavalet2022survey}.
+
+L'adozione di HTTPS è imprescindibile non solo per le API REST, ma soprattutto per proteggere il token di autenticazione JSON Web Token (JWT), impedendo la sua intercettazione. In assenza di un canale cifrato, un attaccante posizionato sulla rete (attacco \textit{Man-In-The-Middle}) potrebbe intercettare il token in chiaro e impersonare l'utente. Il protocollo TLS stabilisce una crittografia end-to-end che assicura che i dati scambiati siano leggibili solo dagli endpoint autorizzati, garantendo contemporaneamente l'autenticità del server tramite certificati digitali \cite{sy2019enhanced}. Dal punto di vista crittografico, il canale utilizza cifrari simmetrici moderni come AES-256-GCM (\textit{Galois/Counter Mode}), che forniscono cifratura autenticata garantendo sia la segretezza che l'integrità del messaggio contro tentativi di manomissione \cite{carnavalet2022survey}.
+
 \section{Integrazione Frontend}
 \label{sec:frontend}
 %----------------------------------------------------------------------------------------
@@ -780,6 +957,44 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %----------------------------------------------------------------------------------------
 \subsection{TypeScript: Type-Safety JavaScript}
 \label{subsec:typescript}
+
+\subsubsection{Definizione e Paradigma del Linguaggio}
+\label{subsubsec:ts-definizione}
+
+Nel panorama dello sviluppo web moderno, \textbf{TypeScript} rappresenta un'evoluzione strutturale del tradizionale scripting lato client. Definito formalmente come un superset sintattico di JavaScript, questo linguaggio, sviluppato e mantenuto da Microsoft come progetto open-source, integra un sistema di tipizzazione statica opzionale all'interno della flessibilità dinamica propria dello standard ECMAScript \cite{typescript_docs, ecma262}.
+
+L'architettura del linguaggio, giunta alla versione 5.x, non è destinata all'esecuzione diretta nei browser o nei runtime come Node.js. Essa necessita invece di un processo di compilazione, o più propriamente detto di \textit{transpilation}, gestito dal compilatore \texttt{tsc}. Il processo di compilazione converte TypeScript in JavaScript conforme a ECMA‑262, assicurando compatibilità cross‑platform e rimuovendo le annotazioni di tipo, che sono utili solo in fase di sviluppo \cite{typescript_docs, devblogs_microsoft}.
+
+\subsubsection{Analisi Comparativa: Static vs Dynamic Typing}
+\label{subsubsec:ts-analisi-comparativa}
+
+L'adozione di TypeScript risponde alle criticità dello sviluppo su larga scala in JavaScript: grazie ai tipi statici opzionali, diminuisce la probabilità di errori, facilita il refactoring e migliora la manutenibilità del codice. Come evidenziato dalla documentazione tecnica relativa alla tipizzazione statica, la verifica dei vincoli sui dati in JavaScript avviene esclusivamente a \textit{runtime}, esponendo il software a errori che emergono solo durante l'esecuzione \cite{mdn_static_typing}. Al contrario, TypeScript anticipa tale validazione alla fase di compilazione (\textit{compile-time}), permettendo l'identificazione preventiva di incongruenze logiche e sintattiche \cite{typescript_docs}.
+
+La Tabella \ref{tab:js-vs-ts} riassume le differenze strutturali tra i due approcci, evidenziando l'impatto sulla stabilità del codice e sull'esperienza di sviluppo.
+
+\begin{table}[ht]
+\centering
+\caption{Confronto architetturale: JavaScript vs TypeScript.}
+\label{tab:js-vs-ts}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Aspetto Funzionale} & \textbf{JavaScript (Standard ECMA)} & \textbf{TypeScript} \\ \midrule
+Verifica dei Tipi & Runtime (Dinamica) & Compile-time (Statica) \\
+Rilevamento Errori & In Produzione/Esecuzione & In Sviluppo/Compilazione \\
+Supporto Tooling & IntelliSense Limitato & Autocomplete Completo \\
+Refactoring & Rischioso (String-based) & Sicuro (Type-checked) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Un vantaggio determinante derivante dall'adozione di questo paradigma è il potenziamento degli strumenti di supporto allo sviluppo. Ambienti di sviluppo integrati come Visual Studio Code sfruttano le definizioni di tipo per offrire funzionalità avanzate di \textbf{IntelliSense}, quali il completamento automatico del codice, la documentazione in linea e la navigazione semantica delle API \cite{vscode_intellisense}. Tale caratteristica permette di diminuire notevolmente il rischio di errori banali, come refusi nei nomi dei metodi o accessi a proprietà inesistenti, che in un contesto puramente JavaScript verrebbero intercettati solo a runtime \cite{typescript_docs, vscode_intellisense}.
+
+\subsubsection{Implementazione nel Contesto Progettuale}
+\label{subsubsec:ts-project-role}
+
+Nell'architettura del configuratore 3D, l'impiego di TypeScript (versione 5.x) costituisce la base per garantire la robustezza del frontend. La necessità di manipolare strutture dati complesse per la configurazione tridimensionale e la gestione di comunicazioni real-time richiede garanzie di correttezza che trascendono le capacità del JavaScript puro.
+
+In particolare, l'integrazione del client \textbf{SignalR} avviene attraverso il pacchetto \- \texttt{@microsoft/signalr}, il quale fornisce definizioni di tipo native \cite{npm_signalr}. Questo approccio permette di strutturare le invocazioni dei metodi remoti e la gestione degli eventi in modo \textit{type-safe}. Ogni messaggio scambiato tra client e server viene validato rispetto a interfacce predefinite, assicurando che il payload dei dati rispetti rigorosamente la struttura attesa dall'Hub. L'adozione di TypeScript rende le API di comunicazione verificabili staticamente, riducendo la fragilità tipica dei contesti dinamici e aumentando manutenibilità e scalabilità del client \cite{typescript_docs, npm_signalr}.
 %----------------------------------------------------------------------------------------
 
 % Contenuti da sviluppare (0.7 pagine):
@@ -839,6 +1054,32 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Pagine stimate: 0.8
 
+
+\subsubsection{Il Package @microsoft/signalr}
+\label{subsubsec:signalr-package}
+
+L'implementazione lato client della comunicazione real-time nel progetto \textit{Configurator3D} si basa sul package \texttt{@microsoft/signalr}, una libreria JavaScript ufficiale distribuita attraverso il registro npm e progettata per fornire un'interfaccia completa e type-safe per l'interazione con hub SignalR remoti \cite{npm_signalr}. Questa componente software, allineata alla versione 8.x del framework server-side, costituisce il layer di astrazione che permette alle applicazioni browser-based e ai runtime Node.js di stabilire connessioni bidirezionali con backend ASP.NET Core, gestendo automaticamente la negoziazione del protocollo di trasporto e la serializzazione dei messaggi \cite{microsoft_signalr_docs}.
+
+Dal punto di vista architetturale, il package espone un insieme di API object-oriented incentrate sulla classe \texttt{HubConnection\-Builder}, che implementa il pattern \textit{Builder} per la configurazione dichiarativa delle connessioni. L'oggetto \texttt{Hub\-Connection} risultante rappresenta il canale di comunicazione attraverso cui avviene lo scambio di messaggi con il server. Le primitive fondamentali dell'API adottano una semantica asincrona basata su Promise, assicurando compatibilità nativa con il modello di concorrenza moderno di JavaScript. Nello specifico, il metodo \texttt{start()} inizializza la connessione effettuando l'handshake con il server, mentre \texttt{on(eventName, handler)} permette la registrazione di callback per eventi specifici inviati dal server, realizzando un pattern \textit{Observer} distribuito \cite{npm_signalr, ms_signalr_intro}.
+
+La capacità di invocare metodi remoti in modo programmatico è fornita dalla primitiva \texttt{invoke(methodName, ...args)}, che serializza i parametri, li trasmette al server attraverso il canale WebSocket (o il trasporto di fallback attivo), e restituisce una Promise risolta con il valore di ritorno del metodo server-side. Questo meccanismo di \textit{Remote Procedure Call} (RPC) permette di ridurre significativamente la complessità dello sviluppo di interfacce distribuite, nascondendo i dettagli del protocollo sottostante e della gestione degli errori di rete \cite{microsoft_signalr_docs}.
+
+\subsubsection{Configurazione e Resilienza della Connessione}
+\label{subsubsec:signalr-configuration}
+La robustezza della comunicazione real-time in ambienti di produzione richiede una configurazione precisa dei meccanismi di resilienza e diagnostica. Il \texttt{HubConnection\-Builder} mette a disposizione metodi fluent per definire i parametri operativi critici della connessione, offrendo la flessibilità necessaria ad adattarsi a diverse topologie di rete e requisiti di affidabilità \cite{microsoft_signalr_docs}.
+
+Il metodo \texttt{withUrl(url, options)} definisce l'endpoint del servizio SignalR e, opzionalmente, configura aspetti avanzati del trasporto, come l'inclusione di header HTTP personalizzati o la specificazione esplicita dei protocolli di trasporto ammissibili. La resistenza alle disconnessioni temporanee, fenomeno impossibile da evitare del tutto in reti mobili o congestionate, è gestita dalla direttiva \texttt{withAutomaticReconnect(retryDelays)}, che implementa una strategia di riconnessione automatica con backoff esponenziale. La specifica dei ritardi di retry, tipicamente configurati come array crescente (ad esempio \texttt{[0, 2000, 5000, 10000]} millisecondi), consente di bilanciare la reattività nel ripristino della connessione con la necessità di evitare sovraccarichi sul server in scenari di degradazione estesa del servizio \cite{microsoft_signalr_docs, google_websocket_best_practices}.
+
+Il monitoraggio diagnostico dello stato della connessione è facilitato dal metodo \texttt{configureLogging(level)}, che attiva la tracciatura dettagliata degli eventi del ciclo di vita della connessione, inclusi handshake, fallimenti di trasporto e messaggi scambiati. La definizione di handler per eventi specifici avviene per mezzo delle invocazioni del metodo \texttt{on(eventName, callback)}, dove \texttt{eventName} corrisponde al nome del metodo definito nell'interfaccia strongly-typed dell'hub server. Nel contesto progettuale, eventi quali \texttt{"GetMessage"} e \texttt{"GetConnectionId"} sono intercettati per aggiornare lo stato dell'applicazione client in risposta a notifiche push dal backend \cite{npm_signalr}.
+
+La invocazione di metodi sul server avviene tramite la primitiva \texttt{invoke(method\-Name, ...args)}, che serializza automaticamente i parametri tipizzati in formato JSON. Ad esempio, \texttt{invoke("SendMessage", receiverId, message)} invia al server una richiesta di inoltro di un messaggio a un destinatario specifico. La chiamata restituisce una \texttt{Promise} che si risolve al completamento dell’operazione o viene respinta in caso di errore di rete o applicativo. Il ciclo di vita della connessione è gestito dai metodi \texttt{start()}, che apre il canale asincrono, e \texttt{stop()}, che chiude la connessione in modo ordinato; inoltre il callback \texttt{onclose(error)} viene invocato quando si verifica una disconnessione, sia intenzionale sia dovuta a un errore \cite{microsoft_signalr_docs, ms_signalr_intro}.
+
+\subsubsection{Integrazione Applicativa e Pattern Operativi}
+\label{subsubsec:signalr-project-role}
+Nel contesto dell'architettura del configuratore tridimensionale, il client SignalR assume il ruolo di ponte da comunicazione tra l'interfaccia utente e il server MCP (\textit{Model Context Protocol}), gestendo lo scambio di comandi e notifiche di stato. La registrazione di handler per eventi specifici, corrispondenti ai comandi del protocollo applicativo, è implementata mediante invocazioni successive del metodo \texttt{on()}. Comandi quali \texttt{"open"}, \texttt{"create"} e \texttt{"add"} sono intercettati da callback che aggiornano atomicamente lo stato del modello 3D visualizzato, garantendo coerenza tra la rappresentazione locale e lo stato remoto gestito dal backend \cite{integrating_signalr_dotnet}.
+
+Per assicurare l'affidabilità delle operazioni distribuite, è stato adottato un pattern di acknowledgment esplicito. Al completamento dell'elaborazione di un comando ricevuto, il client invoca il metodo \texttt{invoke("SendAck", commandId, status)}, trasmettendo al server la conferma dell'avvenuta ricezione ed esecuzione. Questo schema, ispirato ai protocolli di comunicazione affidabile, permette al server di rilevare eventuali perdite di messaggi o timeout di elaborazione, Attivando strategie di compensazione, come la ritrasmissione o la notifica di errore all'utente, si mitiga l'impatto dei guasti temporanei \cite{integrating_signalr_dotnet, Medavarapu2022}.
+
 %----------------------------------------------------------------------------------------
 % FINE CAPITOLO 3: Stack Tecnologico
 % Pagine totali stimate: 2 + 3.5 + 4.5 + 2.5 + 1.5 = ~14 pagine
@@ -853,9 +1094,9 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %----------------------------------------------------------------------------------------
 
 % Panoramica dell'architettura a tre livelli:
-% - Livello MCP Server: MarkunoApiTools espone tool MCP per l'AI Assistant
+% - Livello MCP Server: ExternalApiTools espone tool MCP per l'AI Assistant
 % - Livello Bridge: SignalRService gestisce comunicazione real-time
-% - Livello External Systems: MarkunoAPI (REST) e Configurator3D (client)
+% - Livello External Systems: ExternalApi (REST) e Configurator3D (client)
 %
 % Concetti chiave da evidenziare:
 % - Pattern Architetturale: Layered Architecture con separazione responsabilità
@@ -865,14 +1106,36 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Diagramma: diagram_1_overview.mmd
 % Pagine stimate: 2-3
+La progettazione del sistema si fonda su un'architettura modulare a strati (\emph{Layered Architecture}), nata per generare una netta separazione delle responsabilità tra i componenti logici e per favorendo di conseguenza la manutenibilità e la testabilità del software. LIl design si ha come obiettivo di coordinare flussi informativi diversi garantendo l'interazione con un agente AI e la comunicazione tecnica verso sistemi gestionali esterni e interfacce 3D di configurazione.
 
+L'architettura proposta agisce come un intermediario intelligente, diviendo la logica decisionale dell'AI dai dettagli operativi dei sottosistemi sottostanti. Come illustrato nel Diagramma 1, il sistema si articola in tre livelli funzionali principali: il livello di definizione degli strumenti MCP, il livello di servizio per la comunicazione in tempo reale e il livello di integrazione con i sistemi esterni.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/diagram_1_overview.png}
+  \caption{Diagramma 1: Architettura di alto livello: componenti principali e relazioni tra Program, ExternalApiTools, SignalRService, ExternalApi e Configurator3D.}
+  \label{fig:diagram-1}
+\end{figure}
+
+\subsection*{Il Pattern Architetturale e i Componenti Logici}
+
+Come punto focale della gerarchia si colloca il modulo dedicato agli strumenti MCP (identificato nel diagramma come \texttt{ExternalApiTools}). Questo componente rappresenta il fulcro  dell'applicazione server che ha come responsabilità l'esposizione all'AI Assistant di un set di funzionalità astratte,come l'autenticazione, la gestione dei progetti o l'inserimento di articoli, mascherando la complessità delle chiamate sottostanti. Questo livello funge da traduttore ossia converte le intenzioni espresse in linguaggio naturale dall'agente o dall'utente in comandi eseguibili dal sistema.
+
+A supporto delle operazioni che richiedono un'interazione immediata con l'interfaccia utente, interviene il livello di servizio real-time, rappresentato dalla classe \texttt{SignalRService}. Questo modulo implementa il pattern \emph{Bridge}, agendo come canale di comunicazione asincrono verso il configuratore grafico (\texttt{Configurator3D}). La scelta di isolare la logica di comunicazione in un servizio dedicato permette di svincolare il protocollo di trasporto dal resto della logica, facilitando eventuali evoluzioni future del progetto senza impattare sulla definizione dei tool MCP.
+
+I sistemi esterni, pur essendo separati fisicamente dal server MCP, fanno parte integrante dell'ecosistema. Il componente \texttt{ExternalApi} espone le API REST responsabili della persistenza e della logica di business, mentre il client grafico \texttt{Configurator3D} riceve comandi per aggiornare la scena 3D e invia feedback sullo stato della configurazione. Il server MCP funge da mediatore: traduce le richieste dell'assistente AI in chiamate REST verso \texttt{ExternalApi} e invia comandi in tempo reale a \texttt{Configurator3D}, mantenendo coerenza tra dati persistenti e rappresentazione grafica.
+
+\subsection*{Strategie di Comunicazione e Protocolli}
+
+Un aspetto distintivo dell'architettura risiede nella natura ibrida dei pattern di comunicazione adottati. Il sistema orchestra due paradigmi differenti per rispondere a requisiti non funzionali diversi:
+I sistemi esterni, pur essendo separati fisicamente dal server MCP, sono parte integrante dell'ecosistema. Il componente \texttt{ExternalApi} espone API REST per la persistenza e la logica di business, mentre il client grafico \texttt{Configurator3D} applica i comandi alla scena 3D e restituisce feedback sullo stato della configurazione. Il server MCP agisce da mediatore: traduce le richieste dell'assistente AI in chiamate REST verso \texttt{ExternalApi} e invia comandi in tempo reale a \texttt{Configurator3D}, mantenendo sincronizzati i dati persistenti e la rappresentazione grafica.
 %----------------------------------------------------------------------------------------
 \section{Sistema di Configurazione e Bootstrap}
 \label{sec:configurazione-bootstrap}
 %----------------------------------------------------------------------------------------
 
 % Gestione della configurazione applicativa:
-% - AppSettings: struttura con BaseUrl, MarkunoCredentials, SignalRConfig
+% - AppSettings: struttura con BaseUrl, ExternalCredentials, SignalRConfig
 % - Pattern Dependency Injection: registrazione servizi singleton
 % - IConfiguration: caricamento da appsettings.json
 % - Responsabilità Program.cs: load config → register services → configure MCP
@@ -885,7 +1148,30 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Diagramma: diagram_2_configuration.mmd
 % Pagine stimate: 2-3
+La fase di inizializzazione, o \emph{bootstrap}, costituisce il momento fondante del ciclo di vita applicativo, durante il quale vengono stabilite le condizioni operative necessarie per la corretta esecuzione del server MCP. La progettazione di questo stadio non si limita al mero avvio dei processi, ma definisce una strategia strutturata per la gestione delle dipendenze, l'isolamento dei parametri di configurazione e la predisposizione dei canali di comunicazione sicuri. L'architettura adotta un approccio dichiarativo, delegando al componente \texttt{Program} (l'\emph{entry point}) la responsabilità di orchestrare il caricamento delle impostazioni e la registrazione dei servizi nel contenitore di \emph{Dependency Injection} (DI).
 
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/diagram_2_configuration.png}
+  \caption{Diagramma 2: Layer di configurazione: struttura di \texttt{AppSettings} (con ExternalCredentials e SignalRConfig) e relazioni con Program, IServiceCollection e IConfiguration.}
+  \label{fig:diagram-2}
+\end{figure}
+\subsection*{Modellazione e Gestione della Configurazione}
+
+Un principio cardine adottato nel design del sistema è la completa esternalizzazione della configurazione, eliminando qualsiasi forma di codifica rigida (\emph{hardcoding}) di parametri sensibili o variabili d'ambiente all'interno del codice sorgente. Come illustrato nel Diagramma 2, il modello di configurazione è stato strutturato gerarchicamente attraverso la classe \texttt{AppSettings}, che funge da radice per l'aggregazione di tutte le impostazioni applicative.
+
+Questa classe mappa direttamente la struttura del file \texttt{appsettings.json}, suddividendo le responsabilità in sotto-moduli specializzati: \begin{itemize} \item \textbf{ExternalCredentials}: incapsula le credenziali di accesso predefinite (utente e password) necessarie per l'autenticazione iniziale verso le API del sistema gestionale esterno. \item \textbf{SignalRConfig}: definisce i parametri di connessione per il bridge real-time, inclusi l'URL dell'Hub e i flag di sicurezza per la gestione dei certificati SSL in ambienti di sviluppo (\texttt{AllowInsecure}). \item \textbf{BaseUrl}: specifica l'endpoint radice per le chiamate REST, permettendo di variare l'ambiente di destinazione senza ricompilare l'applicazione. \end{itemize}
+
+Il caricamento di tali parametri è gestito dall'interfaccia \texttt{IConfiguration}, che implementa una strategia a livelli di priorità. Il sistema è progettato per supportare configurazioni specifiche per l'ambiente (\emph{environment-specific settings}), caricando in sequenza il file di base e successivamente le sovrascritture specifiche (es. \texttt{appsettings.Development.json} o \texttt{appsettings.Production.json}). Questo approccio garantisce che le configurazioni di produzione non vengano accidentalmente compromesse durante le fasi di test e, aspetto critico per la sicurezza, permette di escludere i file contenenti credenziali reali dal sistema di controllo versione (\emph{version control}), mantenendo i segreti confidenziali.
+
+\subsection*{Orchestrazione dei Servizi e Dependency Injection}
+
+Una volta caricata la configurazione, il flusso di bootstrap procede con la registrazione dei servizi nel framework. Questa fase è cruciale per definire il ciclo di vita degli oggetti e le loro modalità di interazione. Il design sfrutta pervasivamente il pattern della \emph{Dependency Injection} per disaccoppiare l'implementazione dei servizi dalla loro utilizzazione nei tool MCP.
+
+Particolare attenzione è stata posta nella definizione del ciclo di vita del \texttt{SignalRService}. A differenza dei componenti stateless, questo servizio gestisce una connessione WebSocket persistente verso il client 3D. Di conseguenza, è stato configurato come \textbf{Singleton}: un'unica istanza condivisa deve essere creata all'avvio dell'applicazione e mantenuta viva per l'intera durata dell'esecuzione. Questa scelta architetturale assicura che tutti i tool MCP che necessitano di inviare aggiornamenti real-time utilizzino il medesimo canale di comunicazione, evitando la proliferazione di connessioni ridondanti e garantendo la coerenza dello stato di connessione.
+
+Parallelamente, vengono registrati i servizi per la comunicazione HTTP e il nucleo stesso del server MCP (\texttt{ExternalApiTools}). Il metodo \texttt{ConfigureServices} agisce quindi come punto di convergenza dove le configurazioni statiche, caricate dagli \texttt{AppSettings}, vengono iniettate nei servizi dinamici, rendendo il sistema pronto a gestire le richieste dell'agente AI in modo robusto e configurabile.
 %----------------------------------------------------------------------------------------
 \section{Servizio di Comunicazione Real-Time}
 \label{sec:servizio-signalr}
@@ -911,6 +1197,25 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % Diagramma: diagram_3_signalr_service.mmd
 % Pagine stimate: 3-4
 
+La gestione della comunicazione bidirezionale tra il server MCP e il client grafico è lasciata a un componente specializzato, identificato come \texttt{SignalRService}. Questa classe non si configura come un semplice wrapper attorno alle librerie di trasporto, bensì come un servizio infrastrutturale robusto, progettato per incapsulare la complessità del protocollo WebSocket e garantire la stabilità del canale di comunicazione anche in presenza di instabilità di rete.
+
+\subsection*{Incapsulamento e Gestione del Ciclo di Vita}
+Il \texttt{SignalRService} funge da intermediario tra la logica di dominio e l'oggetto \texttt{HubConnection}, nascondendo dettagli di basso livello come la negoziazione dei trasporti e la gestione dei certificati SSL. Espone un'interfaccia semplice e si occupa del ciclo di vita della connessione: la procedura interna \texttt{TryBuildAndStartConnectionAsync} applica una retry policy e la riconnessione automatica per ripristinare la sessione senza intervento manuale. Per agevolare sviluppo e testing locali è previsto il supporto a certificati self‑signed, mantenendo impostazioni di sicurezza più rigide in produzione.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{figures/3_signalr_service.png}
+  \caption{Diagramma 3: Diagramma delle classi del SignalR Service Layer: struttura interna e relazioni con i componenti esterni.}
+  \label{fig:diagram-3}
+\end{figure}
+
+\subsection*{Primitive di Comunicazione e Flussi Dati}
+
+L'interfaccia pubblica del servizio è stata realizzata per supportare le esigenze di interazione con il \texttt{Configurator3D}. Il metodo \texttt{SendCommandAsync} rappresenta la primitiva principale per il flusso in uscita (Server $\rightarrow$ Client), il compito è permettere l'invio di comandi strutturati, come \texttt{open}, \texttt{create} o \texttt{list\_elements}, corredati dai relativi payload dati. Parallelamente, il metodo generico \texttt{CallHubMethodAsync} offre una flessibilità maggiore, consentendo l'invocazione di qualsiasi metodo esposto dall'Hub esterno (\texttt{SignalRHub}), garantendo l'estensibilità del sistema verso future funzionalità non pensate.
+
+Per il flusso Client $\rightarrow$ Server il servizio usa un modello ad eventi. Tramite \texttt{OnReceiveMessage} i componenti registrano i propri handler in una lista interna; quando l'\texttt{HubConnection} riceve un messaggio, il \texttt{SignalRService} lo inoltra a tutti gli handler registrati. In questo modo la ricezione è separata dall'elaborazione, permettendo a più parti del server MCP di reagire indipendentemente e in modo asincrono.
+
+Il servizio, inoltre, espone proprietà diagnostiche quali \texttt{IsConnected} e \texttt{ConnectionId}, essenziali per monitorare lo stato attuale del sistema e per gestire correttamente l'indirizzamento dei messaggi in scenari multi-client, dove l'identificazione univoca della sessione è cruciale per il corretto instradamento delle risposte.
 %----------------------------------------------------------------------------------------
 \section{Infrastruttura SignalR e WebSocket}
 \label{sec:infrastruttura-signalr}
@@ -974,6 +1279,25 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % Diagramma: 05-component-diagram.md (diagramsSignalR)
 % Pagine stimate: 2-3
 
+La progettazione del sottosistema di comunicazione real-time si fonda su un'architettura a più strati, implementata per garantire la scalabilità e la manutenibilità del codice attraverso il principio della separazione delle responsabilità (\emph{Separation of Concerns}). Come presentato nel diagramma dei componenti, il sistema è suddiviso in più livelli distinti, ciascuno con un definito compito nel ciclo di vita del messaggio.
+
+\subsection*{Dalla Negoziazione del Trasporto al Core Framework}
+
+Al vertice della pila architetturale si colloca il \textbf{Client Layer}, che nel contesto specifico del progetto è rappresentato principalmente dal \texttt{Configurator3D}, un'applicazione web basata su TypeScript. Questo livello interagisce direttamente con il \textbf{Transport Layer}, il quale astrae la complessità dei protocolli di rete sottostanti.
+
+Il sistema di trasporto preferisce WebSocket per la bassa latenza e il full‑duplex, ma supporta fallback automatici a Server‑Sent Events o Long Polling. Questo assicura continuità del servizio anche in reti restrittive o su client legacy, senza modifiche alla logica applicativa.
+
+La relazione tra i protocolli di rete e l'applicazione è gestito dal \textbf{SignalR Core Layer}. Qui operano componenti importanti come il \emph{Connection Manager}, responsabile del mantenimento e del monitoraggio del ciclo di vita delle connessioni attive, e il \emph{Protocol Handler}. Esso svolge la funzione vitale di serializzazione e deserializzazione dei payload, supportando formati standard come JSON. L'adozione dell'SDK ufficiale \texttt{@microsoft/signalr} assicura una gestione robusta di queste operazioni a basso livello.
+
+\subsection*{Logica Applicativa e di Business}
+
+Il cuore del sistema risiede nell'\textbf{Application Layer}, dove il middleware CORS e i servizi di autenticazione basati su JWT proteggono l'accesso alle risorse. Il punto centrale di questo livello è l'\texttt{SignalrHub}, l'hub centrale che funge da router per tutti i messaggi in ingresso e in uscita. Per garantire la robustezza del codice e prevenire errori di runtime, l'interazione server-client è governata dall'interfaccia fortemente tipizzata \texttt{IClient}. Questo contratto \emph{strongly-typed} definisce rigorosamente i metodi invocabili sui client, offrendo vantaggi significativi in termini di \emph{type-safety} e supporto agli strumenti di sviluppo.
+
+Sottostante l'Application Layer opera il \textbf{Business Layer}, che incapsula la logica di dominio. Il \emph{Message Handler} orchestra i flussi di dati e delega al \emph{Routing Engine} l'instradamento delle richieste alle azioni opportune basandosi sui metadati del messaggio. Il \emph{Validation Service} verifica preliminarmente la conformità strutturale e semantica dei payload, garantendo che solo messaggi validi raggiungano il nucleo applicativo.
+
+\subsection*{Infrastruttura e Dati}
+
+A supporto dell'intera architettura agisce l'\textbf{Infrastructure Layer}. Questo livello fornisce servizi essenziali configurati tramite il pattern della \emph{Dependency Injection}, quali il sistema di logging centralizzato e la gestione della configurazione, che estrae i parametri operativi da file esterni (\texttt{appsettings.json}). Infine, il \textbf{Data Layer} definisce le strutture dati fondamentali, come i DTO (\emph{Data Transfer Objects}) utilizzati per il trasporto delle informazioni, e fornisce l'accesso all'\emph{Hub Context}, permettendo di recuperare informazioni runtime sullo stato delle connessioni e degli utenti attivi.
 %----------------------------------------------------------------------------------------
 \subsection{Modello delle Classi e Pattern Hub}
 \label{subsec:modello-classi-hub}
@@ -1029,7 +1353,28 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Diagramma: 01-class-diagram.md (diagramsSignalR)
 % Pagine stimate: 2-3
+La progettazione orientata agli oggetti del sottosistema SignalR si articola attorno al concetto di \emph{Strongly-Typed Hub}, un pattern architetturale che garantisce la sicurezza dei tipi e la coerenza dei contratti di interfaccia tra server e client. Come illustrato nel diagramma delle classi, il nucleo operativo è rappresentato dalla classe \texttt{SignalRHub}, la quale estende la classe base astratta \texttt{Hub<T>} del framework ASP.NET Core, tipizzandola con l'interfaccia \texttt{IClient}.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/ClassDiagram.png}
+  \caption{Diagramma delle classi del SignalR Service Layer: struttura, responsabilità e relazioni tra SignalRHub, IClient, Message (DTO) e SignalRService.}
+  \label{fig:diagramma delle classi SignalRHub}
+\end{figure}
+
+\subsubsection{Definizione dei Contratti e Trasferimento Dati}
+
+L'adozione di un approccio fortemente tipizzato si concretizza nell'interfaccia \texttt{IClient}, che definisce formalmente il contratto delle operazioni invocabili dal server verso i client connessi. Questa astrazione rimuove l'ambiguità tipica delle invocazioni basate su stringhe ("magic strings"), esponendo metodi espliciti come \texttt{GetMessage}, deputato alla ricezione dei payload operativi, e \texttt{GetConnectionId}, utilizzato per la sincronizzazione degli identificativi di sessione necessaria per instaurare canali di comunicazione diretti (point-to-point).
+
+Il veicolo informativo all'interno di questa architettura è il DTO (\emph{Data Transfer Object}) denominato \texttt{Message}. Questa classe è stata progettata come un contenitore agnostico e flessibile, capace di incapsulare l'intera semantica dell'interazione. Attraverso proprietà quali \texttt{Action} (che determina l'operazione richiesta, es. "create", "open") e \texttt{Route} (che definisce il percorso logico del messaggio), il DTO disaccoppia il contenuto informativo dal meccanismo di trasporto, permettendo al sistema di evolvere aggiungendo nuovi tipi di comandi senza alterare la struttura del protocollo di base. La proprietà \texttt{Params}, definita come oggetto generico, offre l'estensibilità necessaria per trasportare payload dinamici di complessità variabile.
+
+\subsubsection{L'Hub Centrale e la Gestione del Ciclo di Vita}
+
+La classe \texttt{SignalRHub} funge da orchestratore centrale per tutte le comunicazioni in tempo reale. Oltre a implementare la logica di business per il routing dei messaggi (metodo \texttt{SendMessage}) e lo scambio degli identificativi di connessione (\texttt{SendConnectionId}), essa eredita dalla classe base \texttt{Hub<T>} l'accesso al contesto della chiamata (\texttt{HubCallerContext}) e ai gestori dei gruppi (\texttt{IGroupManager}). Particolare rilevanza assumono gli hook del ciclo di vita, \texttt{OnConnectedAsync} e \texttt{OnDisconnectedAsync}, che permettono al sistema di reagire proattivamente agli eventi di connessione e disconnessione, gestendo la pulizia delle risorse e l'aggiornamento dello stato delle presenze.
+
+\subsubsection{Configurazione e Bootstrap dell'Applicazione}
+
+A supporto del nucleo logico, la classe statica \texttt{Program} e le estensioni dei servizi (\texttt{IService\-CollectionExtensions}) definiscono l'infrastruttura di bootstrap. Seguendo il paradigma della \emph{Dependency Injection}, la configurazione è modularizzata attraverso metodi di estensione dedicati (\texttt{AddCustomAuthentication}, \texttt{AddCustom\-Authorization}), che incapsulano la complessità della configurazione dei middleware di sicurezza (come la validazione dei token JWT) e delle policy di accesso, garantendo che l'\texttt{IwineHub} operi in un contesto sicuro e controllato sin dall'avvio dell'applicazione.
 %----------------------------------------------------------------------------------------
 \subsection{Gestione del Ciclo di Vita delle Connessioni}
 \label{subsec:lifecycle-connessioni}
@@ -1093,11 +1438,42 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - Keep-Alive: mantenimento connessione con ping/pong automatici
 % - Graceful Shutdown: cleanup risorse in disconnessione
 %
-% Diagrammi: 
+% Diagrammi:
 % - 02-sequence-connection.md (sequence diagram connessione)
 % - 07-state-diagram.md (state machine connessione)
 % Pagine stimate: 3-4
+La robustezza di un sistema \emph{real-time} dipende in larga misura dalla capacità di gestire in modo deterministico il ciclo di vita delle connessioni client-server. L'architettura progettata adotta un modello a stati finiti per governare ogni fase dell'interazione, dalla negoziazione iniziale fino alla disconnessione controllata, garantendo la coerenza del canale di comunicazione anche in presenza di instabilità di rete.
 
+\subsubsection{Protocollo di Negoziazione e Handshake}
+
+Il processo di connessione segue una sequenza rigorosa, suddivisa in fasi distinte per assicurare la massima compatibilità e sicurezza. La procedura ha inizio con la fase di \textbf{Negoziazione} (\emph{HTTP Negotiate}), durante la quale il client SignalR contatta l'endpoint /hub/negotiate tramite una richiesta HTTP POST standard. In questa fase preliminare, il server non instaura ancora il canale persistente, ma restituisce un \emph{Connection Token} crittografico e un elenco dei trasporti disponibili (WebSocket, SSE, Long Polling), permettendo al client di selezionare la strategia di comunicazione più efficiente supportata dall'ambiente.
+
+Successivamente, se le condizioni lo permettono, avviene l'\textbf{Upgrade del Trasporto}. Il client richiede l'elevazione della connessione tramite l'header \texttt{Upgrade: websocket}, in conformità alla RFC 6455. Il server risponde con lo status \texttt{101 Switching Protocols}, trasformando la connessione HTTP effimera in un tunnel TCP persistente e bidirezionale. A questo punto, il controllo passa al livello applicativo: il server invoca automaticamente l'evento \texttt{OnConnectedAsync} sull'Hub, il quale recupera l'identificativo univoco della sessione (\emph{ConnectionId}) e lo trasmette al client. Questo scambio completa l'handshake, portando il sistema in uno stato pienamente operativo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/SequenceDiagramSignalr.png}
+  \caption{Diagramma di sequenza del flusso di connessione e messaggistica tra Configurator3D, SignalRHub e SignalRService.}
+  \label{fig:sequence-signalr}
+\end{figure}
+
+\subsubsection{Macchina a Stati della Connessione}
+
+Per modellare il comportamento dinamico del client, è stata definita una macchina a stati (\emph{State Machine}) che copre l'intero ciclo di vita della sessione. Lo stato iniziale, \textbf{Disconnected}, rappresenta l'assenza di attività. L'invocazione del metodo di avvio innesca la transizione verso lo stato \textbf{Connecting}, durante il quale il sistema tenta di completare l'handshake entro un timeout predefinito (tipicamente 30 secondi).
+
+Il successo della negoziazione porta allo stato \textbf{Connected}, che evolve rapidamente in \textbf{Active}. In questa fase operativa, il client può trovarsi in diversi sotto-stati funzionali: \emph{Idle} (in attesa), \emph{Sending/Receiving} (durante il transito dei messaggi) o \emph{WaitingACK} (in attesa di conferma di ricezione). L'architettura prevede meccanismi di \emph{Keep-Alive} automatici (ping/pong) per monitorare la salute del canale in assenza di traffico dati.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/StateDiagram.png}
+\caption{Macchina a stati della connessione SignalR: fasi di negoziazione, operatività, riconnessione e disconnessione.}
+\label{fig:state-signalr}
+\end{figure}
+
+Particolare attenzione è stata posta alla resilienza: in caso di interruzione imprevista del segnale, la macchina a stati transita automaticamente in \textbf{Reconnecting}. Qui, entra in gioco una politica di \emph{Backoff Esponenziale}, che distanzia progressivamente i tentativi di riconnessione (es. 2s, 4s, 8s, fino a 30s) per evitare di sovraccaricare il server in scenari di disservizio diffuso (\emph{thundering herd problem}). Solo dopo il fallimento di tutti i tentativi previsti (configurati a un massimo di 5), il sistema transita definitivamente nello stato \textbf{Disconnected}, notificando l'errore all'applicazione ospite.
+
+Infine, la fase di \textbf{Disconnessione} può essere innescata esplicitamente dal client o implicitamente per timeout. In entrambi i casi, il server esegue una procedura di \emph{Graceful Shutdown}, invocando l'evento \texttt{OnDisconnectedAsync} per rilasciare le risorse allocate, rimuovere l'utente dai gruppi di messaggistica e invalidare il ConnectionId, garantendo la pulizia dello stato globale del sistema.
 %----------------------------------------------------------------------------------------
 \subsection{Pattern di Comunicazione: Broadcasting e Point-to-Point}
 \label{subsec:pattern-comunicazione}
@@ -1174,8 +1550,22 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % - 03-sequence-broadcast.md (sequence diagram broadcasting)
 % - 04-sequence-p2p.md (sequence diagram point-to-point)
 % Pagine stimate: 3-4
+L'infrastruttura di comunicazione real-time è stata progettata per offrire la massima flessibilità, supportando tecnicamente diverse topologie di instradamento dei messaggi. Tuttavia, in relazione agli obiettivi specifici di questa tesi e allo stato attuale del prototipo, è stata operata una precisa scelta implementativa riguardo il pattern di distribuzione dei dati.
 
-%----------------------------------------------------------------------------------------
+\subsubsection{Adozione del Pattern Broadcasting}
+
+Nello scenario operativo corrente, il sistema è stato configurato per utilizzare prevalentemente il pattern di Broadcasting. Tale decisione è giustificata dalla natura sperimentale del progetto, che in questa fase non prevede la gestione concorrente di sessioni multi-utente. Essendo l'interazione limitata a un singolo flusso logico tra il server MCP e l'istanza del configuratore 3D, l'invio indistinto dei messaggi a tutti i client connessi (\emph{fire-and-forget}) rappresenta la soluzione più efficiente e leggera, eliminando l'overhead necessario per la gestione e il tracciamento degli identificativi di sessione.
+
+Come illustrato nel diagramma di sequenza seguente, quando il server necessita di aggiornare la scena grafica, l'Hub propaga l'evento parallelamente sull'intero canale. Il client del configuratore, essendo l'unico attore rilevante in ascolto, intercetta ed elabora il comando in autonomia, garantendo l'immediatezza dell'esecuzione senza richiedere complessi meccanismi di handshake per l'indirizzamento.
+
+ \begin{figure}[ht]
+   \centering \includegraphics[width=1\textwidth]{figures/03-sequence-broadcast.png} \caption{Flusso di Broadcasting: propagazione parallela del messaggio (soluzione adottata nel prototipo).} \label{fig:sequence-broadcast}
+  \end{figure}
+
+\subsubsection{Predisposizione per la Comunicazione Point-to-Point (P2P)}
+Nonostante l'adozione attuale del modello diffusivo, l'architettura dell'\texttt{IwineHub} è stata ingegnerizzata per supportare nativamente anche la comunicazione Point-to-Point (P2P). Questa capacità rappresenta un elemento cruciale per la scalabilità futura del sistema verso scenari di produzione multi-tenant.
+
+Qualora il sistema dovesse evolvere per gestire più progettisti che operano contemporaneamente su configurazioni distinte, il Broadcasting diverrebbe inefficace per problemi di privacy e collisione dei comandi. In tale contesto, l'architettura è già pronta per attivare il routing diretto: sfruttando gli identificativi univoci di sessione (\emph{ConnectionId}) generati da SignalR, l'Hub possiede già le primitive necessarie per creare tunnel di comunicazione privati tra il server e uno specifico client. Questa predisposizione garantisce che il passaggio a un ambiente multi-utente non richiederà una riscrittura del nucleo di comunicazione, ma soltanto l'attivazione di logiche di instradamento mirato già definite nel contratto dell'interfaccia.
 \subsection{Flusso di Elaborazione Messaggi}
 \label{subsec:flusso-elaborazione}
 %----------------------------------------------------------------------------------------
@@ -1187,7 +1577,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % Serializzazione:
 % - Client costruisce oggetto Message {Action, Name, Route, Params}
 % - SignalR Client SDK serializza automaticamente in JSON
-% - Esempio: {Action: "notifica", Name: "nuovo_ordine", Route: "/orders/broadcast", 
+% - Esempio: {Action: "notifica", Name: "nuovo_ordine", Route: "/orders/broadcast",
 %             Params: {orderId: 123, status: "pending"}}
 %
 % Selezione Trasporto:
@@ -1277,7 +1667,30 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %
 % Diagramma: 08-data-flow-diagram.md (flowchart elaborazione completa)
 % Pagine stimate: 3-4
+L'efficacia dell'architettura real-time proposta risiede nella definizione di una pipeline rigorosa per il trattamento dei dati, che governa l'intero ciclo di vita del messaggio dalla sua genesi sul client fino alla ricezione e all'esecuzione sul destinatario. Questo flusso non si limita al mero trasporto di byte, ma implementa una logica strutturata di trasformazione, validazione e instradamento che garantisce l'integrità semantica delle comunicazioni all'interno del sistema distribuito.
 
+\subsubsection{Origine e Trasmissione: Il Lato Client}
+
+Il processo ha inizio nel livello applicativo del client mittente, dove viene costruito l'oggetto DTO (\emph{Data Transfer Object}) \texttt{Message}. In questa fase, il sistema popola le proprietà fondamentali: l'\texttt{Action}, che definisce l'intento operativo (ad esempio "notifica" o "command"), la \texttt{Route} per l'instradamento, e l'oggetto \texttt{Params} contenente il payload specifico. Una volta invocato il metodo di invio, l'SDK client di SignalR si fa carico delle complessità di basso livello. Il framework serializza automaticamente l'oggetto nel formato concordato (tipicamente JSON) e seleziona in modo trasparente il miglior trasporto disponibile. Questa astrazione permette allo sviluppatore di ignorare i dettagli del protocollo di rete: se l'ambiente lo supporta, il payload viaggia su un canale WebSocket \emph{full-duplex} a bassa latenza; in caso contrario, il sistema degrada automaticamente verso Server-Sent Events o Long Polling, garantendo la consegna senza richiedere logiche condizionali nel codice sorgente.
+
+\subsubsection{Ricezione e Validazione Server-Side}
+
+Giunto all'Hub centrale, il messaggio subisce un processo di "ingestione". Il motore di SignalR esegue il \emph{binding} dei dati, deserializzando il payload JSON e ricostruendo l'istanza della classe \texttt{Message} in ambiente .NET. Prima di qualsiasi elaborazione logica, il messaggio viene sottoposto a una validazione formale rigorosa. Il sistema verifica che l'oggetto non sia nullo, che l'azione sia definita e che la rotta rispetti i pattern sintattici previsti. Il fallimento di anche uno solo di questi controlli interrompe immediatamente il flusso, sollevando un'eccezione (\texttt{HubException}) che notifica al mittente l'errore di formato (Bad Request), proteggendo il server dall'elaborazione di dati inconsistenti.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/data-flow-diagram.png}
+    \caption{Pipeline logica di elaborazione del messaggio: dalla serializzazione all'esecuzione sul client.}
+    \label{fig:data-flow-messages}
+\end{figure}
+
+\subsubsection{Logica di Routing e Distribuzione}
+
+Superata la validazione, il componente di \emph{Routing Engine} analizza la proprietà \texttt{Route} per determinare la strategia di destinazione. Il sistema supporta un meccanismo di \emph{pattern matching} che distingue tre scenari principali: \begin{enumerate} \item Broadcast (/broadcast): Il messaggio è destinato all'intera platea. Il server utilizza primitive di parallelismo (\texttt{Task.WhenAll}) per inviare il dato simultaneamente a tutti i client connessi, minimizzando la latenza complessiva. \item Direct (/direct/:id): Il sistema estrae l'identificativo del destinatario dai parametri. Viene effettuata una verifica di presenza nel contesto attivo (\emph{Hub Context}): se il client è online, il messaggio viene instradato sul suo canale privato; in caso contrario, possono essere attivate strategie di gestione dell'assenza (come la notifica di errore al mittente). \item Group (/group/:name): Il messaggio viene indirizzato a un sottoinsieme logico di utenti, sfruttando la gestione dei gruppi nativa di SignalR. \end{enumerate}
+
+\subsubsection{Ricezione ed Esecuzione sul Destinatario}
+
+Il ciclo si conclude sul client ricevente. L'SDK intercetta l'evento di rete e deserializza nuovamente il contenuto in un oggetto JavaScript/TypeScript. Qui entra in gioco un meccanismo di \emph{dispatching} basato sull'azione: uno \emph{switch} logico analizza la proprietà \texttt{Action} e delega l'esecuzione al gestore specifico. Ad esempio, un'azione di tipo "command" potrebbe innescare l'apertura di un modello 3D, mentre una "notifica" si limiterebbe ad aggiornare l'interfaccia utente. Opzionalmente, per operazioni critiche, il protocollo può prevedere un \emph{Acknowledgment} (ACK): terminata l'elaborazione, il client invia un segnale di ritorno al server, confermando l'avvenuto successo dell'operazione e chiudendo la transazione logica.
 %----------------------------------------------------------------------------------------
 \subsection{Integrazione con l'Architettura MCP}
 \label{subsec:integrazione-mcp-signalr}
@@ -1783,10 +2196,10 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %     private readonly SignalRService _signalRService;
 %     private readonly ILogger<MarkunoApiTools> _logger;
 %     private readonly IConfiguration _config;
-%     
+%
 %     private static string? _authToken;
 %     private static User? _currentUser;
-%     
+%
 %     public MarkunoApiTools(
 %         HttpClient httpClient,
 %         SignalRService signalRService,
@@ -1797,12 +2210,12 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         _signalRService = signalRService;
 %         _logger = logger;
 %         _config = config;
-%         
+%
 %         // Configura HttpClient base address
 %         var baseUrl = _config["MarkunoApi:BaseUrl"];
 %         _httpClient.BaseAddress = new Uri(baseUrl);
 %     }
-%     
+%
 %     [McpTool("login", "Autentica utente e ottiene token JWT")]
 %     public async Task<string> Login(
 %         [McpParameter("username")] string? username = null,
@@ -1811,10 +2224,10 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         // Usa credenziali da config se non fornite
 %         username ??= _config["MarkunoApi:DefaultUser"];
 %         password ??= _config["MarkunoApi:DefaultPassword"];
-%         
+%
 %         var loginRequest = new { name = username, password };
 %         var response = await _httpClient.PostAsJsonAsync("/api/login", loginRequest);
-%         
+%
 %         if (!response.IsSuccessStatusCode)
 %         {
 %             return JsonSerializer.Serialize(new {
@@ -1823,13 +2236,13 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %                 statusCode = (int)response.StatusCode
 %             });
 %         }
-%         
+%
 %         var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
 %         _authToken = loginResponse?.Data?.User?.Token;
 %         _currentUser = loginResponse?.Data?.User;
-%         
+%
 %         _logger.LogInformation("Login effettuato per utente {Username}", username);
-%         
+%
 %         return JsonSerializer.Serialize(new {
 %             success = true,
 %             username = _currentUser?.Name,
@@ -1837,7 +2250,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             level = _currentUser?.Level
 %         });
 %     }
-%     
+%
 %     private async Task EnsureAuthenticatedAsync()
 %     {
 %         if (string.IsNullOrEmpty(_authToken))
@@ -1845,12 +2258,12 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             await Login();
 %         }
 %     }
-%     
+%
 %     private void AddAuthHeader()
 %     {
 %         if (!string.IsNullOrEmpty(_authToken))
 %         {
-%             _httpClient.DefaultRequestHeaders.Authorization = 
+%             _httpClient.DefaultRequestHeaders.Authorization =
 %                 new AuthenticationHeaderValue("Bearer", _authToken);
 %         }
 %     }
@@ -1905,7 +2318,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % {
 %     await EnsureAuthenticatedAsync();
 %     AddAuthHeader();
-%     
+%
 %     // FASE 1: Inserimento articolo base
 %     var articleData = new {
 %         id = projectId,
@@ -1916,18 +2329,18 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         note = "",
 %         rule = ""
 %     };
-%     
+%
 %     var addResponse = await _httpClient.PostAsJsonAsync("/muconf/radd", articleData);
 %     if (!addResponse.IsSuccessStatusCode)
 %     {
 %         return ErrorResponse("Errore inserimento articolo", addResponse.StatusCode);
 %     }
-%     
+%
 %     var addResult = await addResponse.Content.ReadFromJsonAsync<ApiResponse>();
 %     var rowId = addResult?.Data?.Data; // Estrai rowId
-%     
+%
 %     _logger.LogInformation("Articolo base inserito, rowId={RowId}", rowId);
-%     
+%
 %     // FASE 2: Applicazione varianti (se presenti)
 %     bool variantsApplied = false;
 %     if (ruleset != null && ruleset.Count > 0)
@@ -1941,14 +2354,14 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         var getResponse = await _httpClient.PostAsJsonAsync("/muconf/rget", getRequest);
 %         var getResult = await getResponse.Content.ReadFromJsonAsync<ArticleResponse>();
 %         var pars = getResult?.Data?.Pars ?? new Dictionary<string, string>();
-%         
+%
 %         // Step 2.2: MODIFY - Applica ruleset
 %         foreach (var rule in ruleset)
 %         {
 %             pars[rule.Cod] = rule.Opz;
 %             _logger.LogDebug("Applicata regola: {Cod}={Opz}", rule.Cod, rule.Opz);
 %         }
-%         
+%
 %         // Step 2.3: SAVE - Salva modifiche
 %         var saveRequest = new {
 %             id = projectId,
@@ -1957,10 +2370,10 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         };
 %         var saveResponse = await _httpClient.PostAsJsonAsync("/muconf/rsave", saveRequest);
 %         variantsApplied = saveResponse.IsSuccessStatusCode;
-%         
+%
 %         _logger.LogInformation("Varianti applicate: {Count} regole", ruleset.Count);
 %     }
-%     
+%
 %     // FASE 3: Notifica client 3D (se receiverId fornito)
 %     bool notified = false;
 %     if (!string.IsNullOrEmpty(receiverId))
@@ -1971,13 +2384,13 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             Route = $"/direct/{receiverId}",
 %             Params = new { projectId, rowId }
 %         };
-%         
+%
 %         notified = await _signalRService.CallHubMethodAsync(
 %             "SendMessage", receiverId, message);
-%             
+%
 %         _logger.LogInformation("Client 3D notificato: {Notified}", notified);
 %     }
-%     
+%
 %     // Risposta completa
 %     return JsonSerializer.Serialize(new {
 %         success = true,
@@ -2033,17 +2446,17 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %     private readonly List<Action<string, object>> _receiveHandlers = new();
 %     private readonly object _lastListLock = new();
 %     private string? _lastListElementsPayload;
-%     
+%
 %     public SignalRService(ILogger<SignalRService> logger, IConfiguration config)
 %     {
 %         _logger = logger;
 %         _config = config;
 %         _configuredUrl = _config["SignalR:HubUrl"] ?? "https://localhost:7193";
 %     }
-%     
-%     public bool IsConnected => _isConnected && 
+%
+%     public bool IsConnected => _isConnected &&
 %                                _hubConnection?.State == HubConnectionState.Connected;
-%     
+%
 %     public string? ConnectionId => _hubConnection?.ConnectionId;
 % }
 % ```
@@ -2054,19 +2467,19 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % public async Task<bool> ConnectAsync()
 % {
 %     if (IsConnected) return true;
-%     
+%
 %     var urls = new[] {
 %         _configuredUrl,
 %         $"{_configuredUrl}/hub",
 %         $"{_configuredUrl}/configuratorHub"
 %     };
-%     
+%
 %     foreach (var url in urls)
 %     {
 %         try
 %         {
 %             _logger.LogInformation("Tentativo connessione a {Url}", url);
-%             
+%
 %             if (await TryBuildAndStartConnectionAsync(url))
 %             {
 %                 _isConnected = true;
@@ -2079,7 +2492,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             _logger.LogWarning(ex, "Fallito tentativo connessione a {Url}", url);
 %         }
 %     }
-%     
+%
 %     _logger.LogError("Tutti i tentativi di connessione falliti");
 %     return false;
 % }
@@ -2087,7 +2500,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % private async Task<bool> TryBuildAndStartConnectionAsync(string url)
 % {
 %     var allowInsecure = _config.GetValue<bool>("SignalR:AllowInsecureCertificates");
-%     
+%
 %     var builder = new HubConnectionBuilder()
 %         .WithUrl(url, options => {
 %             if (allowInsecure)
@@ -2095,7 +2508,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %                 options.HttpMessageHandlerFactory = handler => {
 %                     if (handler is HttpClientHandler clientHandler)
 %                     {
-%                         clientHandler.ServerCertificateCustomValidationCallback = 
+%                         clientHandler.ServerCertificateCustomValidationCallback =
 %                             (message, cert, chain, errors) => true;
 %                     }
 %                     return handler;
@@ -2112,28 +2525,28 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             logging.SetMinimumLevel(LogLevel.Debug);
 %         })
 %         .Build();
-%     
+%
 %     // Registra event handlers
 %     builder.Closed += async (error) => {
 %         _isConnected = false;
 %         _logger.LogWarning("Connessione SignalR chiusa: {Error}", error?.Message);
 %         await Task.CompletedTask;
 %     };
-%     
+%
 %     builder.Reconnecting += (error) => {
 %         _logger.LogInformation("Tentativo riconnessione SignalR");
 %         return Task.CompletedTask;
 %     };
-%     
+%
 %     builder.Reconnected += (connectionId) => {
 %         _isConnected = true;
 %         _logger.LogInformation("Riconnessione riuscita, nuovo ConnectionId={Id}", connectionId);
 %         return Task.CompletedTask;
 %     };
-%     
+%
 %     // Registra message handlers
 %     RegisterReceiveHandlers(builder);
-%     
+%
 %     await builder.StartAsync();
 %     _hubConnection = builder;
 %     return true;
@@ -2180,11 +2593,11 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         _logger.LogWarning("Tentativo invio messaggio senza connessione attiva");
 %         return false;
 %     }
-%     
+%
 %     try
 %     {
 %         await _hubConnection!.InvokeCoreAsync(methodName, args);
-%         _logger.LogDebug("Invocato metodo {Method} con {ArgCount} argomenti", 
+%         _logger.LogDebug("Invocato metodo {Method} con {ArgCount} argomenti",
 %             methodName, args.Length);
 %         return true;
 %     }
@@ -2209,7 +2622,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %     // Handler per messaggi diretti
 %     connection.On<string, object>("ReceiveMessage", (senderId, message) => {
 %         _logger.LogInformation("Ricevuto messaggio da {Sender}", senderId);
-%         
+%
 %         // Invoca tutti gli handler registrati
 %         foreach (var handler in _receiveHandlers)
 %         {
@@ -2223,12 +2636,12 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             }
 %         }
 %     });
-%     
+%
 %     // Handler per messaggi generici
 %     connection.On<object>("GetMessage", (message) => {
 %         _logger.LogInformation("Ricevuto GetMessage: {Message}", message);
 %     });
-%     
+%
 %     _logger.LogDebug("Handler messaggi registrati");
 % }
 %
@@ -2246,13 +2659,13 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % {
 %     if (_receiveHandlers.Any(h => h.Method.Name.Contains("ListElements")))
 %         return;
-%     
+%
 %     OnReceiveMessage((senderId, message) => {
 %         try
 %         {
 %             var messageObj = JsonSerializer.Deserialize<Message>(
 %                 message.ToString() ?? "{}");
-%             
+%
 %             if (messageObj?.Action == "list_elements")
 %             {
 %                 lock (_lastListLock)
@@ -2304,7 +2717,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 
 %----------------------------------------------------------------------------------------
 \section{Implementazione Hub (SignalR Server)}
-\label{sec:implementazione-iwine-hub}
+\label{sec:implementazione-hub}
 %----------------------------------------------------------------------------------------
 
 % CLASSE HUB PRINCIPALE:
@@ -2313,38 +2726,38 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % public class IwineHub : Hub<IClient>
 % {
 %     private readonly ILogger<IwineHub> _logger;
-%     
+%
 %     public IwineHub(ILogger<IwineHub> logger)
 %     {
 %         _logger = logger;
 %     }
-%     
+%
 %     public override async Task OnConnectedAsync()
 %     {
 %         var connectionId = Context.ConnectionId;
 %         _logger.LogInformation("Client connesso: {ConnectionId}", connectionId);
-%         
+%
 %         // Invia ConnectionId al client
 %         await Clients.Caller.GetConnectionId(connectionId);
-%         
+%
 %         await base.OnConnectedAsync();
 %     }
-%     
+%
 %     public override async Task OnDisconnectedAsync(Exception? exception)
 %     {
 %         var connectionId = Context.ConnectionId;
-%         _logger.LogInformation("Client disconnesso: {ConnectionId}, Reason: {Reason}", 
+%         _logger.LogInformation("Client disconnesso: {ConnectionId}, Reason: {Reason}",
 %             connectionId, exception?.Message);
-%         
+%
 %         await base.OnDisconnectedAsync(exception);
 %     }
-%     
+%
 %     public async Task SendMessage(Message message)
 %     {
 %         var senderId = Context.ConnectionId;
-%         _logger.LogInformation("SendMessage da {Sender}, Action={Action}, Route={Route}", 
+%         _logger.LogInformation("SendMessage da {Sender}, Action={Action}, Route={Route}",
 %             senderId, message.Action, message.Route);
-%         
+%
 %         try
 %         {
 %             // Validazione messaggio
@@ -2352,7 +2765,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             {
 %                 throw new HubException("Action è obbligatoria");
 %             }
-%             
+%
 %             // Routing basato su Route
 %             if (message.Route?.StartsWith("/broadcast") == true)
 %             {
@@ -2360,7 +2773,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %                 await Clients.All.GetMessage(message);
 %                 _logger.LogDebug("Messaggio broadcast a tutti i client");
 %             }
-%             else if (message.Params is JsonElement paramsElement && 
+%             else if (message.Params is JsonElement paramsElement &&
 %                      paramsElement.TryGetProperty("receiverId", out var receiverIdProp))
 %             {
 %                 // Point-to-point a client specifico
@@ -2380,12 +2793,12 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             throw new HubException($"Errore processing messaggio: {ex.Message}");
 %         }
 %     }
-%     
+%
 %     public async Task SendConnectionId(string receiverId, string senderId)
 %     {
-%         _logger.LogInformation("SendConnectionId: {Sender} → {Receiver}", 
+%         _logger.LogInformation("SendConnectionId: {Sender} → {Receiver}",
 %             senderId, receiverId);
-%         
+%
 %         try
 %         {
 %             await Clients.Client(receiverId).GetConnectionId(senderId);
@@ -2482,46 +2895,46 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % export class SignalRClient {
 %     private connection: signalR.HubConnection;
 %     private messageHandlers: Map<string, (message: Message) => void>;
-%     
+%
 %     constructor(hubUrl: string) {
 %         this.messageHandlers = new Map();
-%         
+%
 %         this.connection = new signalR.HubConnectionBuilder()
 %             .withUrl(hubUrl)
 %             .withAutomaticReconnect([0, 2000, 5000, 10000])
 %             .configureLogging(signalR.LogLevel.Information)
 %             .build();
-%         
+%
 %         this.setupEventHandlers();
 %     }
-%     
+%
 %     private setupEventHandlers(): void {
 %         // Handler ricezione messaggi
 %         this.connection.on("GetMessage", (message: Message) => {
 %             console.log("Ricevuto messaggio:", message);
 %             this.handleMessage(message);
 %         });
-%         
+%
 %         // Handler ricezione ConnectionId
 %         this.connection.on("GetConnectionId", (connectionId: string) => {
 %             console.log("Ricevuto ConnectionId:", connectionId);
 %             localStorage.setItem("signalr-connection-id", connectionId);
 %         });
-%         
+%
 %         // Lifecycle events
 %         this.connection.onclose((error) => {
 %             console.warn("Connessione chiusa:", error);
 %         });
-%         
+%
 %         this.connection.onreconnecting((error) => {
 %             console.info("Tentativo riconnessione...");
 %         });
-%         
+%
 %         this.connection.onreconnected((connectionId) => {
 %             console.info("Riconnesso, nuovo ID:", connectionId);
 %         });
 %     }
-%     
+%
 %     async start(): Promise<void> {
 %         try {
 %             await this.connection.start();
@@ -2531,11 +2944,11 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             setTimeout(() => this.start(), 5000); // Retry dopo 5s
 %         }
 %     }
-%     
+%
 %     registerHandler(action: string, handler: (message: Message) => void): void {
 %         this.messageHandlers.set(action, handler);
 %     }
-%     
+%
 %     private handleMessage(message: Message): void {
 %         const handler = this.messageHandlers.get(message.Action);
 %         if (handler) {
@@ -2544,7 +2957,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             console.warn("Nessun handler per action:", message.Action);
 %         }
 %     }
-%     
+%
 %     async sendMessage(message: Message): Promise<void> {
 %         await this.connection.invoke("SendMessage", message);
 %     }
@@ -2557,33 +2970,33 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % export class MessageHandler {
 %     private signalRClient: SignalRClient;
 %     private configurator: Configurator3D;
-%     
+%
 %     constructor(signalRClient: SignalRClient, configurator: Configurator3D) {
 %         this.signalRClient = signalRClient;
 %         this.configurator = configurator;
-%         
+%
 %         this.registerHandlers();
 %     }
-%     
+%
 %     private registerHandlers(): void {
 %         // Handler per "open"
 %         this.signalRClient.registerHandler("open", async (message) => {
 %             const projectId = message.Name;
 %             console.log("Comando OPEN progetto:", projectId);
-%             
+%
 %             // Carica progetto nel configurator 3D
 %             const projectData = await this.fetchProjectData(projectId);
 %             await this.configurator.loadProject(projectData);
-%             
+%
 %             // Invia conferma
 %             await this.sendAck(message, { loaded: true });
 %         });
-%         
+%
 %         // Handler per "create"
 %         this.signalRClient.registerHandler("create", async (message) => {
 %             const params = message.Params as CreateProjectParams;
 %             console.log("Comando CREATE progetto:", params);
-%             
+%
 %             // Mostra dialog creazione con dati pre-compilati
 %             this.configurator.showCreateDialog({
 %                 description: params.des,
@@ -2591,18 +3004,18 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %                 autoOpen: params.open
 %             });
 %         });
-%         
+%
 %         // Handler per "list_elements"
 %         this.signalRClient.registerHandler("list_elements", async (message) => {
 %             const params = message.Params as ListElementsParams;
 %             console.log("Richiesta LIST_ELEMENTS:", params);
-%             
+%
 %             // Cerca nel catalogo locale
 %             const results = await this.configurator.searchCatalog(
 %                 params.catalogo,
 %                 params.cerca
 %             );
-%             
+%
 %             // Invia risultati al server
 %             await this.signalRClient.sendMessage({
 %                 Action: "list_elements",
@@ -2612,12 +3025,12 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %             });
 %         });
 %     }
-%     
+%
 %     private async fetchProjectData(projectId: string): Promise<ProjectData> {
 %         const response = await fetch(`/api/projects/${projectId}`);
 %         return await response.json();
 %     }
-%     
+%
 %     private async sendAck(originalMessage: Message, data: any): Promise<void> {
 %         await this.signalRClient.sendMessage({
 %             Action: "ack",
@@ -2710,7 +3123,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 % {
 %     builder.Services.AddHttpClient()
 %         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler {
-%             ServerCertificateCustomValidationCallback = 
+%             ServerCertificateCustomValidationCallback =
 %                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
 %         });
 % }
@@ -2724,14 +3137,14 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %     .AddJwtBearer(options => {
 %         options.Authority = "https://identity-server.com";
 %         options.Audience = "iwine-hub";
-%         
+%
 %         // Per SignalR
 %         options.Events = new JwtBearerEvents {
 %             OnMessageReceived = context => {
 %                 var accessToken = context.Request.Query["access_token"];
 %                 var path = context.HttpContext.Request.Path;
-%                 
-%                 if (!string.IsNullOrEmpty(accessToken) && 
+%
+%                 if (!string.IsNullOrEmpty(accessToken) &&
 %                     path.StartsWithSegments("/configuratorHub"))
 %                 {
 %                     context.Token = accessToken;
@@ -2755,7 +3168,7 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %         .AllowAnyHeader()
 %         .AllowCredentials(); // Per SignalR cookies
 %     });
-%     
+%
 %     options.AddPolicy("Development", policy => {
 %         policy.AllowAnyOrigin()
 %               .AllowAnyMethod()
@@ -2763,8 +3176,8 @@ Tuttavia, i WebSocket presentano limiti. L’implementazione lato server è più
 %     });
 % });
 %
-% var corsPolicy = builder.Environment.IsDevelopment() 
-%     ? "Development" 
+% var corsPolicy = builder.Environment.IsDevelopment()
+%     ? "Development"
 %     : "Production";
 % app.UseCors(corsPolicy);
 % ```
