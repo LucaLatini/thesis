@@ -1679,7 +1679,7 @@ Giunto all'Hub centrale, il messaggio subisce un processo di "ingestione". Il mo
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/data-flow-diagram.png}
+    \includegraphics[width=0.55\textwidth]{figures/data-flow-diagram.png}
     \caption{Pipeline logica di elaborazione del messaggio: dalla serializzazione all'esecuzione sul client.}
     \label{fig:data-flow-messages}
 \end{figure}
@@ -1749,7 +1749,16 @@ Il ciclo si conclude sul client ricevente. L'SDK intercetta l'evento di rete e d
 %
 % Diagrammi: tutti i diagrammi precedenti mostrano aspetti di questa integrazione
 % Pagine stimate: 2-3
+L'architettura progettata trova la sua concreta realizzazione nel flusso di integrazione che lega il server MCP al client grafico attraverso il bridge SignalR. In questo contesto, il \texttt{SignalRService} non opera più come un componente isolato, ma assume il ruolo di attuatore per gli strumenti (\emph{Tools}) esposti dall'agente di Intelligenza Artificiale. L'obiettivo di questa integrazione è tradurre l'intento semantico dell'utente — espresso in linguaggio naturale — in comandi imperativi che modificano lo stato della scena 3D in tempo reale.
 
+\subsubsection{Il Flusso di Esecuzione End-to-End}Il processo di interazione è stato modellato come un ciclo chiuso (\emph{closed-loop}), essenziale per garantire all'AI il feedback necessario sul completamento delle operazioni. Tale flusso si articola in quattro fasi sequenziali:\begin{enumerate}\item Interpretazione dell'Intento (AI $\rightarrow$ MCP): Il ciclo ha inizio quando l'AI Assistant riceve un prompt testuale, ad esempio "Apri il progetto Cucina Milano". Il server MCP, analizzando la richiesta, identifica la funzione pertinente e la traduce in una chiamata di tool strutturata (es. \texttt{OpenProject}), estraendo i parametri necessari come il nome o l'ID del progetto.\item **Incapsulamento e Dispatch (MCP $\rightarrow$ SignalR):** Il tool invocato non interagisce direttamente con il client, ma delega l'operazione al \texttt{SignalRService}. In questa fase avviene la traduzione dal dominio dell'AI al dominio della messaggistica: il comando viene incapsulato in un oggetto \texttt{Message} (DTO), specificando l'azione (es. "open"), il payload dati e la rotta di destinazione. Essendo il servizio registrato come Singleton, esso garantisce che tutti i tool MCP accedano alla medesima istanza del bridge, mantenendo la coerenza del canale di comunicazione.
+
+\item **Instradamento ed Esecuzione (Hub $\rightarrow$ Client):** L'\texttt{IwineHub} riceve il messaggio e, sfruttando la connessione WebSocket persistente, lo instrada verso il \texttt{Configurator3D}. Il client intercetta il comando, decodifica il payload e innesca le logiche interne di rendering, procedendo al caricamento del modello richiesto e all'aggiornamento della vista grafica.
+
+\item **Feedback Asincrono (Client $\rightarrow$ MCP):** L'ultimo passaggio è cruciale per la sincronizzazione. Una volta completata l'operazione grafica, il client invia un messaggio di risposta verso il server. Il \texttt{SignalRService}, in ascolto tramite i propri handler, intercetta questo feedback e lo restituisce al tool MCP in attesa. Questo permette all'AI Assistant di confermare all'utente l'avvenuto successo dell'operazione ("Ho aperto il progetto Cucina Milano"), chiudendo il cerchio comunicativo.
+\end{enumerate}
+
+\subsubsection{Considerazioni di Design per l'Integrazione}La stabilità di questo flusso si basa su specifiche scelte di design volte a mitigare la complessità dei sistemi distribuiti. Un aspetto critico riguarda la gestione del mapping delle connessioni: poiché l'MCP opera in un contesto prevalentemente \emph{stateless} (ogni richiesta è indipendente), è stato necessario implementare logiche per associare correttamente le richieste dell'AI alla specifica connessione SignalR attiva del client grafico, garantendo che i comandi raggiungano l'istanza corretta.Inoltre, l'adozione di un DTO unificato (\texttt{Message}) condiviso trasversalmente tra i layer funge da contratto formale, riducendo i rischi di disallineamento nel formato dei dati. Infine, il sistema integra meccanismi di gestione dei timeout sulle operazioni asincrone: qualora il client 3D non risponda entro una finestra temporale definita (segno di un possibile blocco o disconnessione), il server MCP è programmato per interrompere l'attesa e segnalare un'eccezione all'agente AI, garantendo che il sistema non rimanga in uno stato di attesa indefinita (\emph{deadlock}).
 %----------------------------------------------------------------------------------------
 \section{Sistema di Autenticazione}
 \label{sec:autenticazione}
@@ -1776,7 +1785,25 @@ Il ciclo si conclude sul client ricevente. L'SDK intercetta l'evento di rete e d
 %
 % Diagramma: diagram_4_authentication.mmd
 % Pagine stimate: 2-3
+La sicurezza e l'integrità delle comunicazioni tra il server MCP e il backend gestionale esterno rappresentano un requisito fondamentale dell'architettura. Poiché il sistema è progettato per operare su dati sensibili, quali anagrafiche progetti e cataloghi articoli, è stato implementato un meccanismo di autenticazione robusto basato su standard di settore, capace di garantire che ogni operazione venga eseguita in un contesto autorizzato.
 
+\subsection{Strategia Token-Based}
+
+Il modello di sicurezza adottato si fonda sullo standard JSON Web Token (JWT), scelto per la sua natura \emph{stateless} e per l'ampia interoperabilità in ambienti distribuiti. A differenza delle tradizionali sessioni basate su cookie, che richiedono il mantenimento dello stato lato server, l'approccio JWT delega al client — in questo caso il server MCP — la responsabilità di conservare e presentare le credenziali di accesso sotto forma di \emph{Bearer Token}.
+
+Dal punto di vista della progettazione dei dati, l'interazione con il sistema di identità esterno è mediata da specifici oggetti di trasferimento dati (DTO). In particolare, il sistema non mappa l'intera struttura dell'utente remoto, ma si focalizza sull'incapsulamento della risposta di login (\texttt{LoginResponse}), estraendo e conservando esclusivamente le informazioni necessarie alla persistenza della sessione, ovvero il token di accesso e le eventuali scadenze associate.
+
+Per garantire l'efficienza operativa e ridurre la latenza dovuta a ripetute negoziazioni delle credenziali, il design prevede una gestione della sessione di tipo \emph{stateful} all'interno del ciclo di vita dell'applicazione. Il token, una volta ottenuto, viene persistito in un contesto statico di memoria; questa scelta architetturale permette di riutilizzare il medesimo titolo di accesso per tutte le richieste successive, evitando di dover rieseguire il login per ogni singolo comando impartito dall'agente AI.
+
+\subsection{Flusso di Autenticazione e Auto-Login}
+
+Il processo di autenticazione è stato disegnato per essere trasparente all'utente finale e resiliente agli errori. Il flusso operativo può essere suddiviso in fasi logiche distinte che governano l'acquisizione e l'utilizzo del token.
+
+In fase di avvio (\emph{bootstrap}) o alla prima richiesta operativa, il sistema recupera le credenziali di accesso. Per facilitare l'automazione e il testing, l'architettura supporta un meccanismo di Auto-Login: le credenziali predefinite sono iniettate tramite il file di configurazione (\texttt{appsettings.json}), permettendo al server MCP di autenticarsi autonomamente verso le API esterne senza richiedere un input manuale interattivo. Questa caratteristica è cruciale per scenari \emph{server-to-server} dove non è presente un operatore umano.
+
+Successivamente, il sistema invoca l'endpoint di autenticazione (\texttt{POST /api/login}) del backend gestionale. Alla ricezione di una risposta positiva, il componente logico estrae il JWT dal payload e lo memorizza nella variabile statica dedicata. Da questo momento in poi, ogni chiamata REST effettuata verso il sistema esterno — sia essa la lettura di un progetto o l'inserimento di un articolo — verrà automaticamente arricchita con l'header HTTP \texttt{Authorization}, contenente il \emph{Bearer Token} valido.
+
+Infine, la progettazione ha tenuto conto delle considerazioni di sicurezza relative alla scadenza della sessione. Sebbene il token venga mantenuto in memoria, il sistema deve essere pronto a gestire risposte di errore di tipo \texttt{401 Unauthorized}. In tale eventualità, l'architettura prevede logicamente la necessità di invalidare il token scaduto e innescare una nuova procedura di login, garantendo la continuità del servizio senza interrompere il flusso di lavoro dell'agente intelligente.
 %----------------------------------------------------------------------------------------
 \section{Gestione Progetti}
 \label{sec:gestione-progetti}
@@ -1801,7 +1828,21 @@ Il ciclo si conclude sul client ricevente. L'SDK intercetta l'evento di rete e d
 %
 % Diagramma: diagram_5_projects.mmd
 % Pagine stimate: 3-4
+La gestione dei progetti rappresenta il cuore del sistema di configurazione. L'architettura deve conciliare due esigenze diverse: da un lato la necessità di accedere ai dati anagrafici memorizzati nel sistema gestionale esterno, dall'altro il bisogno di interagire dinamicamente con l'ambiente grafico 3D. Per risolvere questa sfida, è stata adottata una strategia che separa nettamente il modo in cui i dati vengono letti da come vengono utilizzati.
 
+\subsection*{Modellazione Dati e Accesso tramite Repository}
+
+Il server MCP non possiede un database proprietario per salvare i progetti, ma si comporta come un "proxy" che interroga l'infrastruttura esistente. Per non legare troppo la logica dell'Intelligenza Artificiale ai dettagli tecnici delle API esterne, è stato applicato il Repository Pattern. Questo livello di astrazione permette di nascondere la complessità delle chiamate di rete. In pratica, il codice che gestisce l'AI non deve preoccuparsi di come recuperare i dati, ma interagisce con un modello interno semplificato (\texttt{Project}). Questo modello contiene solo le informazioni essenziali per l'agente, come il codice identificativo, la descrizione e la tipologia, scartando i dettagli superflui presenti nel gestionale.
+
+I dati ricevuti dal sistema esterno vengono uniformati tramite specifici oggetti di trasporto (DTO), come \texttt{ProjectsResponse}. Questo approccio garantisce stabilità: anche se le API esterne dovessero cambiare, la struttura dati interna rimarrebbe coerente. Inoltre, centralizzare l'accesso ai dati facilita l'implementazione di logiche di ricerca flessibili, come la possibilità di cercare un progetto per nome ignorando la differenza tra maiuscole e minuscole.
+
+\subsection*{L'Approccio Dual-Channel}
+
+Una caratteristica distintiva del progetto è l'utilizzo di due canali di comunicazione separati per gestire operazioni di natura diversa. Questo approccio, che possiamo definire Dual-Channel, si struttura così:
+
+\begin{enumerate} \item Canale di Lettura (REST): Viene utilizzato per le operazioni informative, come ottenere la lista dei progetti disponibili tramite \texttt{GetProjects}. Questo garantisce che l'AI abbia sempre una visione aggiornata dei dati presenti nel gestionale. \item Canale di Azione (SignalR): Viene utilizzato per le operazioni che modificano la scena 3D, come l'apertura (\texttt{OpenProject}) o la creazione (\texttt{CreateProject}) di un progetto. \end{enumerate}
+
+Questa distinzione è necessaria perché "aprire un progetto" non significa solo leggere un dato, ma è un comando complesso che obbliga il client grafico a scaricare i modelli 3D e preparare la scena. Il diagramma di sequenza seguente illustra bene questa cooperazione: quando l'utente chiede di aprire un progetto, il sistema usa prima il canale REST per trovare l'ID corretto del progetto, e subito dopo usa il canale SignalR per inviare al client il comando di caricamento visivo.
 %----------------------------------------------------------------------------------------
 \section{Gestione Articoli e Varianti}
 \label{sec:gestione-articoli}
@@ -1832,7 +1873,25 @@ Il ciclo si conclude sul client ricevente. L'SDK intercetta l'evento di rete e d
 %
 % Diagramma: diagram_6_articles_variants.mmd
 % Pagine stimate: 4-5
+Il dominio della configurazione di prodotto non si esaurisce nella semplice selezione di un oggetto da un catalogo, ma richiede un sistema sofisticato per la gestione delle varianti e delle regole di compatibilità. La progettazione del modulo di gestione articoli è stata quindi guidata dalla necessità di astrarre la complessità del sistema gestionale sottostante, offrendo all'agente AI un'interfaccia semplificata per la manipolazione di entità complesse.
 
+\subsection*{Modellazione delle Varianti e Astrazione del Catalogo}
+
+Al centro del design dei dati si colloca la definizione di modelli capaci di rappresentare la variabilità del prodotto. Poiché un articolo può assumere configurazioni differenti in base a finiture, dimensioni o accessori, il sistema adotta il modello \texttt{RuleSetItem} per mappare puntualmente queste specifiche. Ogni istanza di questa classe associa un codice parametro (ad esempio, il tipo di struttura) al valore dell'opzione selezionata, includendo metadati di controllo quali \texttt{IsDef}, per identificare le configurazioni predefinite, e \texttt{IsLock}, per gestire vincoli di immodificabilità imposti dalle logiche di business.
+
+Parallelamente, la classe \texttt{VariantOptions} funge da descrittore per l'esplorazione delle possibilità offerte dal catalogo. Essa incapsula le mappe chiave-valore delle opzioni disponibili per un dato modello, permettendo al sistema di interrogare il gestionale e restituire all'utente (o all'agente intelligente) l'elenco delle personalizzazioni ammissibili. Questa struttura disaccoppia la rappresentazione interna dei dati dalla logica di persistenza, garantendo che le operazioni di ricerca (\texttt{SearchCatalogItems}) e di recupero metadati (\texttt{GetArticleInfo}) operino su DTO (\emph{Data Transfer Objects}) standardizzati e indipendenti dalle specificità del database fisico.
+
+\begin{figure}[H] \centering \includegraphics[width=\textwidth]{figures/GestioneArticolivarianti.png} \caption{Diagramma delle classi per la gestione articoli: interazione tra i tool MCP e le primitive del gestionale esterno.} \label{fig:diagram-articles} \end{figure} % -----------------------------
+
+\subsection*{Il Pattern Transazionale di Configurazione}
+
+L'aspetto più critico nella progettazione di questo modulo risiede nel flusso operativo per l'inserimento di un nuovo articolo configurato (\texttt{AddArticle}). A differenza di una classica operazione CRUD atomica, la natura del configuratore richiede un approccio sequenziale che garantisca la consistenza dello stato tra il server MCP e il motore di regole del gestionale. Per rispondere a questa esigenza, è stato adottato il pattern architetturale GET-MODIFY-SAVE.
+
+Questo schema operativo, illustrato logicamente nel Diagramma 6, scompone l'inserimento di un prodotto in una transazione a più fasi, necessaria per applicare correttamente il \emph{RuleSet}:
+
+\begin{enumerate} \item Istanziazione (Insertion): Il processo inizia con la richiesta di inserimento dell'articolo base tramite la primitiva \texttt{radd}. In questa fase, il sistema esterno alloca la riga d'ordine e restituisce un identificativo univoco, ma l'articolo si trova ancora nel suo stato predefinito (default). \item Acquisizione dello Stato (Retrieval): Immediatamente dopo, il sistema effettua una lettura dello stato corrente dell'oggetto appena creato tramite \texttt{rget}. Questo passaggio è fondamentale per ottenere la stringa di configurazione (identificata come campo \emph{pars}) che contiene l'attuale assetto delle varianti calcolato dal motore di regole. \item Manipolazione Locale (Modification): Il server MCP interviene sulla configurazione recuperata, applicando le modifiche richieste dal prompt dell'utente (il \emph{RuleSet}). Questa operazione avviene in memoria, modificando puntualmente i valori dei parametri senza ancora interagire con il database. \item Persistenza e Sincronizzazione (Commit): Infine, lo stato modificato viene inviato al sistema tramite \texttt{rsave} per la persistenza definitiva. Solo al termine di questo ciclo di scrittura, il sistema notifica l'avvenuto aggiornamento al client grafico tramite SignalR, garantendo che la visualizzazione 3D rifletta esattamente la configurazione validata dal backend. \end{enumerate}
+
+L'adozione del Command Pattern per incapsulare questa logica complessa all'interno del metodo \texttt{AddArticle} permette di esporre all'AI un unico punto di ingresso (un singolo "Tool"), mascherando l'orchestrazione delle chiamate sottostanti e garantendo l'integrità referenziale della configurazione finale.
 %----------------------------------------------------------------------------------------
 \section{Protocollo di Messaggistica SignalR}
 \label{sec:protocollo-messaggistica}
