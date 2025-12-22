@@ -11,8 +11,6 @@
 \usepackage{float}
 \usepackage{microtype}
 
-\geometry{left=2.5cm, right=2.5cm}
-
 \school{\unibo}
 \programme{Corso di Laurea in Ingegneria e Scienze Informatiche}
 \title{Prompt-to-Action: un Model Context Protocol per l’integrazione real-time con configuratori 3D}
@@ -62,7 +60,7 @@
 \acrodef{citygml}[\textit{CityGML}]{\textit{City Geography Markup Language}}
 \acrodef{cswsh}[\textit{CSWSH}]{\textit{Cross-Site WebSocket Hijacking}}
 
-\mainlinespacing{1.5} % line spacing in mainmatter, comment to default (1) prima era 1.241
+\mainlinespacing{1.241} % line spacing in mainmatter, comment to default (1)
 
 \raggedbottom
 \begin{document}
@@ -941,7 +939,7 @@ Per far si che questa limitazione non impatti eccessivamente la sicurezza dell'a
     \label{fig:cors-flow}
 \end{figure}
 
-Nel caso specifico della comunicazione real-time con SignalR, la configurazione si complica maggiormente in quanto vi è la necessità di trasmettere credenziali di autenticazione (cookie o header di autorizzazione). La specifica CORS impone che, quando le credenziali sono coinvolte, il server non possa utilizzare il carattere jolly (\texttt{*}) per l'origine, ma debba restituire l'esatto dominio del chiamante e includere l'header \texttt{Access-Control-Allow\-Credentials: true} \cite{mdncors}. L'assenza di tale configurazione provocherebbe il fallimento immediato dell'handshake WebSocket inizializzato dal client.
+Nel caso specifico della comunicazione real-time con SignalR, la configurazione si complica maggiormente in quanto vi è la necessità di trasmettere credenziali di autenticazione (cookie o header di autorizzazione). La specifica CORS impone che, quando le credenziali sono coinvolte, il server non possa utilizzare il carattere jolly (\texttt{*}) per l'origine, ma debba restituire l'esatto dominio del chiamante e includere l'header \texttt{Access-Control-Allow-Credentials: true} \cite{mdncors}. L'assenza di tale configurazione provocherebbe il fallimento immediato dell'handshake WebSocket inizializzato dal client.
 
 Parallelamente al controllo degli accessi, la confidenzialità e l'integrità dei dati in transito sono garantite dall'adozione del protocollo \textit{Transport Layer Security} (TLS), su cui si basano HTTPS (\textit{HyperText Transfer Protocol Secure}) e WSS (\textit{WebSocket Secure}). L'intero traffico tra il configuratore 3D e le API di backend avviene esclusivamente su canale cifrato, utilizzando prevalentemente lo standard TLS 1.3. La nuova versione del protocollo riduce la latenza durante l'handshake e rimuove algoritmi crittografici obsoleti, limitando la possibilità di sorveglianza del traffico \cite{carnavalet2022survey}.
 
@@ -994,7 +992,7 @@ Un vantaggio determinante derivante dall'adozione di questo paradigma è il pote
 
 Nell'architettura del configuratore 3D, l'impiego di TypeScript (versione 5.x) costituisce la base per garantire la robustezza del frontend. La necessità di manipolare strutture dati complesse per la configurazione tridimensionale e la gestione di comunicazioni real-time richiede garanzie di correttezza che trascendono le capacità del JavaScript puro.
 
-In particolare, l'integrazione del client \textbf{SignalR} avviene attraverso il pacchetto \- \texttt{@microsoft/signalr}, il quale fornisce definizioni di tipo native \cite{npm_signalr}. Questo approccio permette di strutturare le invocazioni dei metodi remoti e la gestione degli eventi in modo \textit{type-safe}. Ogni messaggio scambiato tra client e server viene validato rispetto a interfacce predefinite, assicurando che il payload dei dati rispetti rigorosamente la struttura attesa dall'Hub. L'adozione di TypeScript rende le API di comunicazione verificabili staticamente, riducendo la fragilità tipica dei contesti dinamici e aumentando manutenibilità e scalabilità del client \cite{typescript_docs, npm_signalr}.
+In particolare, l'integrazione del client \textbf{SignalR} avviene attraverso il pacchetto \texttt{@microsoft/signalr}, il quale fornisce definizioni di tipo native \cite{npm_signalr}. Questo approccio permette di strutturare le invocazioni dei metodi remoti e la gestione degli eventi in modo \textit{type-safe}. Ogni messaggio scambiato tra client e server viene validato rispetto a interfacce predefinite, assicurando che il payload dei dati rispetti rigorosamente la struttura attesa dall'Hub. L'adozione di TypeScript rende le API di comunicazione verificabili staticamente, riducendo la fragilità tipica dei contesti dinamici e aumentando manutenibilità e scalabilità del client \cite{typescript_docs, npm_signalr}.
 %----------------------------------------------------------------------------------------
 
 % Contenuti da sviluppare (0.7 pagine):
@@ -1106,9 +1104,9 @@ Per assicurare l'affidabilità delle operazioni distribuite, è stato adottato u
 %
 % Diagramma: diagram_1_overview.mmd
 % Pagine stimate: 2-3
-La progettazione del sistema si fonda su un'architettura modulare a strati (\emph{Layered Architecture}), nata per generare una netta separazione delle responsabilità tra i componenti logici e per favorendo di conseguenza la manutenibilità e la testabilità del software. LIl design si ha come obiettivo di coordinare flussi informativi diversi garantendo l'interazione con un agente AI e la comunicazione tecnica verso sistemi gestionali esterni e interfacce 3D di configurazione.
+La progettazione del sistema si fonda su un'architettura definita a strati (\emph{Layered Architecture}), realizzata per garantire una  separazione delle responsabilità tra i componenti logici e per favorire la manutenibilità e la testabilità del software. Il design deve armonizzare tre linguaggi: quello umano (IA), quello tecnico (gestionali) e quello visivo (3D).
 
-L'architettura proposta agisce come un intermediario intelligente, diviendo la logica decisionale dell'AI dai dettagli operativi dei sottosistemi sottostanti. Come illustrato nel Diagramma 1, il sistema si articola in tre livelli funzionali principali: il livello di definizione degli strumenti MCP, il livello di servizio per la comunicazione in tempo reale e il livello di integrazione con i sistemi esterni.
+L'architettura proposta agisce come un intermediario intelligente, lavorando per disaccoppiare la logica decisionale dell'AI dai dettagli operativi dei sottosistemi sottostanti. Come viene illustrato nel Diagramma 1, il sistema comprende tre livelli funzionali principali: il livello di definizione degli strumenti MCP, il livello di servizio per la comunicazione in tempo reale e il livello di integrazione con i sistemi esterni.
 
 \begin{figure}[H]
   \centering
@@ -1119,16 +1117,28 @@ L'architettura proposta agisce come un intermediario intelligente, diviendo la l
 
 \subsection*{Il Pattern Architetturale e i Componenti Logici}
 
-Come punto focale della gerarchia si colloca il modulo dedicato agli strumenti MCP (identificato nel diagramma come \texttt{ExternalApiTools}). Questo componente rappresenta il fulcro  dell'applicazione server che ha come responsabilità l'esposizione all'AI Assistant di un set di funzionalità astratte,come l'autenticazione, la gestione dei progetti o l'inserimento di articoli, mascherando la complessità delle chiamate sottostanti. Questo livello funge da traduttore ossia converte le intenzioni espresse in linguaggio naturale dall'agente o dall'utente in comandi eseguibili dal sistema.
+Al vertice della gerarchia logica si colloca il modulo dedicato agli strumenti MCP (identificato nel diagramma come \texttt{ExternalApiTools}). La loro responsabilità è esporre all'AI Assistant un set di funzionalità astratte,come l'autenticazione, la gestione dei progetti o l'inserimento di articoli, mascherando la complessità delle chiamate sottostanti. Questo livello opera come un traduttore che è in grado di convertire i comandi, espressi in linguaggio umano, in comandi eseguibili dal sistema.
 
-A supporto delle operazioni che richiedono un'interazione immediata con l'interfaccia utente, interviene il livello di servizio real-time, rappresentato dalla classe \texttt{SignalRService}. Questo modulo implementa il pattern \emph{Bridge}, agendo come canale di comunicazione asincrono verso il configuratore grafico (\texttt{Configurator3D}). La scelta di isolare la logica di comunicazione in un servizio dedicato permette di svincolare il protocollo di trasporto dal resto della logica, facilitando eventuali evoluzioni future del progetto senza impattare sulla definizione dei tool MCP.
+A supporto delle operazioni che richiedono un'interazione immediata con l'interfaccia utente, interviene il livello di servizio real-time, rappresentato dalla classe \texttt{SignalRService}. Questo modulo implementa il pattern \emph{Bridge}, agendo come canale di comunicazione asincrono verso il configuratore grafico (\texttt{Configurator3D}). La scelta di segregare la logica di comunicazione in un servizio dedicato permette di isolare il protocollo di trasporto dal resto della logica di business, facilitando eventuali evoluzioni future dell'infrastruttura di messaggistica senza impattare sulla definizione dei tool MCP.
 
-I sistemi esterni, pur essendo separati fisicamente dal server MCP, fanno parte integrante dell'ecosistema. Il componente \texttt{ExternalApi} espone le API REST responsabili della persistenza e della logica di business, mentre il client grafico \texttt{Configurator3D} riceve comandi per aggiornare la scena 3D e invia feedback sullo stato della configurazione. Il server MCP funge da mediatore: traduce le richieste dell'assistente AI in chiamate REST verso \texttt{ExternalApi} e invia comandi in tempo reale a \texttt{Configurator3D}, mantenendo coerenza tra dati persistenti e rappresentazione grafica.
+I sistemi esterni, sebbene fisicamente separati dal server MCP, costituiscono parte integrante dell'ecosistema progettato. Da un lato, le API del sistema gestionale (rappresentate dalla classe \texttt{ExternalApi}) forniscono la persistenza dei dati e la logica di business core attraverso un'interfaccia REST; dall'altro, il client grafico (\texttt{Configurator3D}) agisce come terminale di visualizzazione, ricevendo comandi di aggiornamento della scena e restituendo feedback sullo stato della configurazione.
 
 \subsection*{Strategie di Comunicazione e Protocolli}
 
-Un aspetto distintivo dell'architettura risiede nella natura ibrida dei pattern di comunicazione adottati. Il sistema orchestra due paradigmi differenti per rispondere a requisiti non funzionali diversi:
-I sistemi esterni, pur essendo separati fisicamente dal server MCP, sono parte integrante dell'ecosistema. Il componente \texttt{ExternalApi} espone API REST per la persistenza e la logica di business, mentre il client grafico \texttt{Configurator3D} applica i comandi alla scena 3D e restituisce feedback sullo stato della configurazione. Il server MCP agisce da mediatore: traduce le richieste dell'assistente AI in chiamate REST verso \texttt{ExternalApi} e invia comandi in tempo reale a \texttt{Configurator3D}, mantenendo sincronizzati i dati persistenti e la rappresentazione grafica.
+Un aspetto distintivo dell'architettura risiede nella natura ibrida dei pattern di comunicazione adottati. Il sistema adotta due paradigmi differenti che sono:
+
+\begin{enumerate} \item \textbf{Comunicazione Sincrona (HTTP/REST):} Utilizzata per l'interazione tra il livello dei tool MCP e le API del gestionale esterno. Questo approccio è stato scelto per operazioni atomiche e transazionali, come il login o il recupero di liste di progetti, dove la consistenza immediata della risposta ha priorità massima. \item \textbf{Comunicazione Asincrona (SignalR/WebSocket):} Adottata per il dialogo tra il server MCP e il client 3D. La necessità di modificare la scena grafica in tempo reale, senza imporre al client un dispensioso polling continuo, ha guidato la scelta verso un protocollo \emph{full-duplex} capace di inviare notifiche push.
+\end{enumerate}
+
+\subsection*{Gestione delle Dipendenze e Configurazione}
+
+Il punto di ingresso dell'applicazione, identificato dalla classe \texttt{Program}, oltre all'avvio del progetto, ha il ruolo di
+\emph{Composition Root} ossia configura il contenitore di \emph{Dependency Injection} (DI), responsabile dell'istanziazione e del ciclo di vita di tutti i servizi.
+
+L'integrazione della Dependency Injection deriva dalla necessità di invertire il controllo tra i componenti del sistema. la classe \texttt{ExternalApiTools} non deve generare al proprio interno le istanze di \texttt{SignalRService} o dei client HTTP, ma ne riceve le astrazioni tramite interfacce al momento della sua creazione.
+
+Dunque, l'architettura è strutturata per adattarsi agilmente ai cambiamenti dei sistemi terzi. Il server MCP funge da adattatore che normalizza i flussi di dati, offrendo all'Intelligenza Artificiale un punto di accesso coerente e delegando ai servizi sottostanti l'intera gestione dei protocolli di comunicazione.
+
 %----------------------------------------------------------------------------------------
 \section{Sistema di Configurazione e Bootstrap}
 \label{sec:configurazione-bootstrap}
@@ -1148,8 +1158,7 @@ I sistemi esterni, pur essendo separati fisicamente dal server MCP, sono parte i
 %
 % Diagramma: diagram_2_configuration.mmd
 % Pagine stimate: 2-3
-La fase di inizializzazione, o \emph{bootstrap}, costituisce il momento fondante del ciclo di vita applicativo, durante il quale vengono stabilite le condizioni operative necessarie per la corretta esecuzione del server MCP. La progettazione di questo stadio non si limita al mero avvio dei processi, ma definisce una strategia strutturata per la gestione delle dipendenze, l'isolamento dei parametri di configurazione e la predisposizione dei canali di comunicazione sicuri. L'architettura adotta un approccio dichiarativo, delegando al componente \texttt{Program} (l'\emph{entry point}) la responsabilità di orchestrare il caricamento delle impostazioni e la registrazione dei servizi nel contenitore di \emph{Dependency Injection} (DI).
-
+La fase di inizializzazione, o \emph{bootstrap}, costituisce il momento fondante del ciclo di vita applicativo, durante il quale vengono stabilite le condizioni operative necessarie per la corretta esecuzione del server MCP. La progettazione di questo stadio definisce una strategia strutturata per la gestione delle dipendenze, l'isolamento dei parametri di configurazione e la predisposizione dei canali di comunicazione sicuri. L'architettura adotta un approccio dichiarativo, delegando al componente \texttt{Program} (l'\emph{entry point}) la responsabilità di orchestrare il caricamento delle impostazioni e la registrazione dei servizi nel contenitore di \emph{Dependency Injection} (DI).
 
 \begin{figure}[H]
   \centering
@@ -1157,19 +1166,20 @@ La fase di inizializzazione, o \emph{bootstrap}, costituisce il momento fondante
   \caption{Diagramma 2: Layer di configurazione: struttura di \texttt{AppSettings} (con ExternalCredentials e SignalRConfig) e relazioni con Program, IServiceCollection e IConfiguration.}
   \label{fig:diagram-2}
 \end{figure}
+
 \subsection*{Modellazione e Gestione della Configurazione}
 
 Un principio cardine adottato nel design del sistema è la completa esternalizzazione della configurazione, eliminando qualsiasi forma di codifica rigida (\emph{hardcoding}) di parametri sensibili o variabili d'ambiente all'interno del codice sorgente. Come illustrato nel Diagramma 2, il modello di configurazione è stato strutturato gerarchicamente attraverso la classe \texttt{AppSettings}, che funge da radice per l'aggregazione di tutte le impostazioni applicative.
 
 Questa classe mappa direttamente la struttura del file \texttt{appsettings.json}, suddividendo le responsabilità in sotto-moduli specializzati: \begin{itemize} \item \textbf{ExternalCredentials}: incapsula le credenziali di accesso predefinite (utente e password) necessarie per l'autenticazione iniziale verso le API del sistema gestionale esterno. \item \textbf{SignalRConfig}: definisce i parametri di connessione per il bridge real-time, inclusi l'URL dell'Hub e i flag di sicurezza per la gestione dei certificati SSL in ambienti di sviluppo (\texttt{AllowInsecure}). \item \textbf{BaseUrl}: specifica l'endpoint radice per le chiamate REST, permettendo di variare l'ambiente di destinazione senza ricompilare l'applicazione. \end{itemize}
 
-Il caricamento di tali parametri è gestito dall'interfaccia \texttt{IConfiguration}, che implementa una strategia a livelli di priorità. Il sistema è progettato per supportare configurazioni specifiche per l'ambiente (\emph{environment-specific settings}), caricando in sequenza il file di base e successivamente le sovrascritture specifiche (es. \texttt{appsettings.Development.json} o \texttt{appsettings.Production.json}). Questo approccio garantisce che le configurazioni di produzione non vengano accidentalmente compromesse durante le fasi di test e, aspetto critico per la sicurezza, permette di escludere i file contenenti credenziali reali dal sistema di controllo versione (\emph{version control}), mantenendo i segreti confidenziali.
+Il caricamento di tali parametri è gestito dall'interfaccia \texttt{IConfiguration}, che implementa una strategia a livelli di priorità. Il sistema è progettato per supportare configurazioni specifiche per l'ambiente (\emph{environment-specific settings}), caricando in sequenza il file di base e successivamente le sovrascritture specifiche (es. \texttt{appsettings.Development.json} o \texttt{appsettings.Production.json}). Questo approccio  permette di escludere i file contenenti credenziali reali dal sistema di controllo versione (\emph{version control}), mantenendo i segreti confidenziali.
 
 \subsection*{Orchestrazione dei Servizi e Dependency Injection}
 
-Una volta caricata la configurazione, il flusso di bootstrap procede con la registrazione dei servizi nel framework. Questa fase è cruciale per definire il ciclo di vita degli oggetti e le loro modalità di interazione. Il design sfrutta pervasivamente il pattern della \emph{Dependency Injection} per disaccoppiare l'implementazione dei servizi dalla loro utilizzazione nei tool MCP.
+Una volta caricata la configurazione, il flusso di bootstrap procede con la registrazione dei servizi nel framework. Questa fase serve a definire il ciclo di vita degli oggetti e come essi interagiscono tra loro. Il design sfrutta il pattern della \emph{Dependency Injection} per disaccoppiare l'implementazione dei servizi dalla loro utilizzazione nei tool MCP.
 
-Particolare attenzione è stata posta nella definizione del ciclo di vita del \texttt{SignalRService}. A differenza dei componenti stateless, questo servizio gestisce una connessione WebSocket persistente verso il client 3D. Di conseguenza, è stato configurato come \textbf{Singleton}: un'unica istanza condivisa deve essere creata all'avvio dell'applicazione e mantenuta viva per l'intera durata dell'esecuzione. Questa scelta architetturale assicura che tutti i tool MCP che necessitano di inviare aggiornamenti real-time utilizzino il medesimo canale di comunicazione, evitando la proliferazione di connessioni ridondanti e garantendo la coerenza dello stato di connessione.
+Particolare attenzione è stata posta nella definizione del ciclo di vita del \texttt{SignalRService}. A differenza dei componenti stateless, questo servizio gestisce una connessione WebSocket persistente verso il client 3D. Di conseguenza, è stato configurato come \textbf{Singleton} che crea un'istanza condivisa all'avvio dell'applicazione e mantenuta viva per l'intera durata dell'esecuzione. Questa scelta assicura che tutti i tool MCP che necessitano di inviare aggiornamenti real-time utilizzino il medesimo canale di comunicazione, evitando la proliferazione di connessioni ridondanti e garantendo la coerenza dello stato di connessione.
 
 Parallelamente, vengono registrati i servizi per la comunicazione HTTP e il nucleo stesso del server MCP (\texttt{ExternalApiTools}). Il metodo \texttt{ConfigureServices} agisce quindi come punto di convergenza dove le configurazioni statiche, caricate dagli \texttt{AppSettings}, vengono iniettate nei servizi dinamici, rendendo il sistema pronto a gestire le richieste dell'agente AI in modo robusto e configurabile.
 %----------------------------------------------------------------------------------------
@@ -1200,7 +1210,7 @@ Parallelamente, vengono registrati i servizi per la comunicazione HTTP e il nucl
 La gestione della comunicazione bidirezionale tra il server MCP e il client grafico è lasciata a un componente specializzato, identificato come \texttt{SignalRService}. Questa classe non si configura come un semplice wrapper attorno alle librerie di trasporto, bensì come un servizio infrastrutturale robusto, progettato per incapsulare la complessità del protocollo WebSocket e garantire la stabilità del canale di comunicazione anche in presenza di instabilità di rete.
 
 \subsection*{Incapsulamento e Gestione del Ciclo di Vita}
-Il \texttt{SignalRService} funge da intermediario tra la logica di dominio e l'oggetto \texttt{HubConnection}, nascondendo dettagli di basso livello come la negoziazione dei trasporti e la gestione dei certificati SSL. Espone un'interfaccia semplice e si occupa del ciclo di vita della connessione: la procedura interna \texttt{TryBuildAndStartConnectionAsync} applica una retry policy e la riconnessione automatica per ripristinare la sessione senza intervento manuale. Per agevolare sviluppo e testing locali è previsto il supporto a certificati self‑signed, mantenendo impostazioni di sicurezza più rigide in produzione.
+Il \texttt{SignalRService} funge da intermediario tra la logica di dominio e l'oggetto \texttt{HubConnection}, nascondendo dettagli di basso livello come la negoziazione dei trasporti e la gestione dei certificati SSL. Espone un'interfaccia semplice e si occupa del ciclo di vita della connessione: la procedura interna \texttt{TryBuildAndStart\-ConnectionAsync} applica una retry policy e la riconnessione automatica per ripristinare la sessione senza intervento manuale.
 
 \begin{figure}[H]
   \centering
@@ -1211,11 +1221,11 @@ Il \texttt{SignalRService} funge da intermediario tra la logica di dominio e l'o
 
 \subsection*{Primitive di Comunicazione e Flussi Dati}
 
-L'interfaccia pubblica del servizio è stata realizzata per supportare le esigenze di interazione con il \texttt{Configurator3D}. Il metodo \texttt{SendCommandAsync} rappresenta la primitiva principale per il flusso in uscita (Server $\rightarrow$ Client), il compito è permettere l'invio di comandi strutturati, come \texttt{open}, \texttt{create} o \texttt{list\_elements}, corredati dai relativi payload dati. Parallelamente, il metodo generico \texttt{CallHubMethodAsync} offre una flessibilità maggiore, consentendo l'invocazione di qualsiasi metodo esposto dall'Hub esterno (\texttt{SignalRHub}), garantendo l'estensibilità del sistema verso future funzionalità non pensate.
+Il metodo \texttt{SendCommandAsync} rappresenta la primitiva principale per il flusso in uscita (Server $\rightarrow$ Client), il compito è permettere l'invio di comandi strutturati, come \texttt{open}, \texttt{create},  corredati dai relativi payload dati. Parallelamente, il metodo generico \texttt{CallHubMethodAsync} offre una flessibilità maggiore, consentendo l'invocazione di qualsiasi metodo esposto dall'Hub esterno (\texttt{SignalRHub}), garantendo l'estensibilità del sistema verso future funzionalità.
 
 Per il flusso Client $\rightarrow$ Server il servizio usa un modello ad eventi. Tramite \texttt{OnReceiveMessage} i componenti registrano i propri handler in una lista interna; quando l'\texttt{HubConnection} riceve un messaggio, il \texttt{SignalRService} lo inoltra a tutti gli handler registrati. In questo modo la ricezione è separata dall'elaborazione, permettendo a più parti del server MCP di reagire indipendentemente e in modo asincrono.
 
-Il servizio, inoltre, espone proprietà diagnostiche quali \texttt{IsConnected} e \texttt{ConnectionId}, essenziali per monitorare lo stato attuale del sistema e per gestire correttamente l'indirizzamento dei messaggi in scenari multi-client, dove l'identificazione univoca della sessione è cruciale per il corretto instradamento delle risposte.
+Il servizio, espone anche proprietà diagnostiche quali \texttt{IsConnected} e \texttt{ConnectionId}, essenziali per monitorare lo stato attuale del sistema e per gestire correttamente l'indirizzamento dei messaggi in scenari multi-client, dove l'identificazione univoca della sessione è cruciale per il corretto instradamento delle risposte.
 %----------------------------------------------------------------------------------------
 \section{Infrastruttura SignalR e WebSocket}
 \label{sec:infrastruttura-signalr}
@@ -1279,25 +1289,23 @@ Il servizio, inoltre, espone proprietà diagnostiche quali \texttt{IsConnected} 
 % Diagramma: 05-component-diagram.md (diagramsSignalR)
 % Pagine stimate: 2-3
 
-La progettazione del sottosistema di comunicazione real-time si fonda su un'architettura a più strati, implementata per garantire la scalabilità e la manutenibilità del codice attraverso il principio della separazione delle responsabilità (\emph{Separation of Concerns}). Come presentato nel diagramma dei componenti, il sistema è suddiviso in più livelli distinti, ciascuno con un definito compito nel ciclo di vita del messaggio.
+La progettazione del sottosistema di comunicazione real-time si fonda su un'architettura a più strati, strutturata per garantire scalabilità e manutenibilità attraverso il principio della separazione delle responsabilità (\emph{Separation of Concerns}). Il sistema è suddiviso in livelli logici distinti, ciascuno incaricato di una fase specifica nel ciclo di vita del messaggio.
 
-\subsection*{Dalla Negoziazione del Trasporto al Core Framework}
+\subsubsection*{Dal Trasporto al Core Framework}
 
-Al vertice della pila architetturale si colloca il \textbf{Client Layer}, che nel contesto specifico del progetto è rappresentato principalmente dal \texttt{Configurator3D}, un'applicazione web basata su TypeScript. Questo livello interagisce direttamente con il \textbf{Transport Layer}, il quale astrae la complessità dei protocolli di rete sottostanti.
+Al vertice si colloca il \textbf{Client Layer}, rappresentato dal \texttt{Configurator3D}. Questo livello interagisce con il \textbf{Transport Layer}, il quale riduce la complessità dei protocolli di rete. Il sistema predilige l'uso di WebSocket per garantire comunicazioni \emph{full-duplex} a bassa latenza, gestendo però in modo trasparente i fallback verso protocolli meno performanti per assicurare la compatibilità con ogni ambiente di rete.
 
-Il sistema di trasporto preferisce WebSocket per la bassa latenza e il full‑duplex, ma supporta fallback automatici a Server‑Sent Events o Long Polling. Questo assicura continuità del servizio anche in reti restrittive o su client legacy, senza modifiche alla logica applicativa.
+Il coordinamento tra i protocolli e l'applicazione è affidato al \textbf{SignalR Core Layer}. In questo strato operano il \emph{Connection Manager}, responsabile del monitoraggio delle sessioni attive, e il \emph{Protocol Handler}, che si occupa della serializzazione dei payload in formato JSON. L'integrazione con l'SDK ufficiale permette di delegare a questo livello la gestione della robustezza e della resilienza delle connessioni a basso livello.
 
-La relazione tra i protocolli di rete e l'applicazione è gestito dal \textbf{SignalR Core Layer}. Qui operano componenti importanti come il \emph{Connection Manager}, responsabile del mantenimento e del monitoraggio del ciclo di vita delle connessioni attive, e il \emph{Protocol Handler}. Esso svolge la funzione vitale di serializzazione e deserializzazione dei payload, supportando formati standard come JSON. L'adozione dell'SDK ufficiale \texttt{@microsoft/signalr} assicura una gestione robusta di queste operazioni a basso livello.
+\subsubsection*{Logica Applicativa e di Business}
 
-\subsection*{Logica Applicativa e di Business}
+Il cuore del sistema risiede nell'\textbf{Application Layer}, dove il middleware CORS e i servizi di autenticazione JWT proteggono l'accesso alle risorse. Il punto di contatto è rappresentato dal \texttt{SignalrHub}, che riceve le invocazioni dai client. Per garantire la coerenza formale del codice, l'interazione è governata dall'interfaccia \texttt{IClient}: questo contratto \emph{strongly-typed} definisce rigorosamente i metodi invocabili, eliminando errori di runtime e garantendo la totale \emph{type-safety} nelle comunicazioni bidirezionali.
 
-Il cuore del sistema risiede nell'\textbf{Application Layer}, dove il middleware CORS e i servizi di autenticazione basati su JWT proteggono l'accesso alle risorse. Il punto centrale di questo livello è l'\texttt{SignalrHub}, l'hub centrale che funge da router per tutti i messaggi in ingresso e in uscita. Per garantire la robustezza del codice e prevenire errori di runtime, l'interazione server-client è governata dall'interfaccia fortemente tipizzata \texttt{IClient}. Questo contratto \emph{strongly-typed} definisce rigorosamente i metodi invocabili sui client, offrendo vantaggi significativi in termini di \emph{type-safety} e supporto agli strumenti di sviluppo.
+Sotto lo strato applicativo opera il \textbf{Business Layer}, incaricato della logica di dominio. Qui, il \emph{Message Handler} orchestra i flussi di dati e si appoggia al \emph{Routing Engine} per l'instradamento delle richieste alle azioni opportune. Contemporaneamente, il \emph{Validation Service} verifica la conformità strutturale dei payload, garantendo che solo messaggi validi vengano effettivamente elaborati.
 
-Sottostante l'Application Layer opera il \textbf{Business Layer}, che incapsula la logica di dominio. Il \emph{Message Handler} orchestra i flussi di dati e delega al \emph{Routing Engine} l'instradamento delle richieste alle azioni opportune basandosi sui metadati del messaggio. Il \emph{Validation Service} verifica preliminarmente la conformità strutturale e semantica dei payload, garantendo che solo messaggi validi raggiungano il nucleo applicativo.
+\subsubsection*{Infrastruttura e Persistenza Dati}
 
-\subsection*{Infrastruttura e Dati}
-
-A supporto dell'intera architettura agisce l'\textbf{Infrastructure Layer}. Questo livello fornisce servizi essenziali configurati tramite il pattern della \emph{Dependency Injection}, quali il sistema di logging centralizzato e la gestione della configurazione, che estrae i parametri operativi da file esterni (\texttt{appsettings.json}). Infine, il \textbf{Data Layer} definisce le strutture dati fondamentali, come i DTO (\emph{Data Transfer Objects}) utilizzati per il trasporto delle informazioni, e fornisce l'accesso all'\emph{Hub Context}, permettendo di recuperare informazioni runtime sullo stato delle connessioni e degli utenti attivi.
+A supporto dell'intera architettura agisce l'\textbf{Infrastructure Layer}. Questo livello fornisce servizi trasversali mediante il pattern della \emph{Dependency Injection}, gestendo il logging centralizzato e l'estrazione dei parametri operativi dai file di configurazione (\texttt{appsettings.json}). Infine, il \textbf{Data Layer} definisce i \emph{Data Transfer Objects} (DTO) per il trasporto delle informazioni e fornisce l'accesso all'\emph{Hub Context}, permettendo di recuperare in tempo reale lo stato delle connessioni e degli utenti attivi.
 %----------------------------------------------------------------------------------------
 \subsection{Modello delle Classi e Pattern Hub}
 \label{subsec:modello-classi-hub}
@@ -1914,8 +1922,22 @@ L'adozione del Command Pattern per incapsulare questa logica complessa all'inter
 %
 % Diagramma: diagram_7_signalr_messages.mmd
 % Pagine stimate: 3-4
+La robustezza dell'interazione tra il server centrale e il client grafico dipende dalla definizione di un protocollo di comunicazione rigoroso, capace di astrarre la complessità del trasporto dati e di standardizzare le interazioni. Anziché definire endpoint multipli e frammentati per ogni singola funzionalità, il design del sistema converge su un unico modello di scambio dati, il \texttt{Message}, che agisce come veicolo universale per tutte le transazioni all'interno del canale SignalR.
 
-%----------------------------------------------------------------------------------------
+\subsection{Semantica dei Messaggi e Command Pattern}
+
+Il cuore del protocollo risiede nella struttura semantica del messaggio, concepita per implementare il \textbf{Command Pattern}. In questo contesto, l'oggetto trasferito non rappresenta solamente un payload di dati, ma incapsula un'intenzione operativa specifica. La proprietà \texttt{Action} assume il ruolo di discriminante fondamentale: essa istruisce il ricevente sulla logica da attivare, distinguendo tra i diversi comandi di modifica dello stato (come \texttt{open}, \texttt{create} o \texttt{add\_article}).
+
+Questa impostazione garantisce un elevato disaccoppiamento tra le parti. Il server può inviare parametri complessi tramite l'oggetto generico \texttt{Params} e specificare il contesto dell'operazione tramite \texttt{Name} e \texttt{Route}, senza che il livello di trasporto debba conoscere i dettagli implementativi della logica di business. Tale flessibilità permette di estendere le funzionalità del sistema — aggiungendo ad esempio nuove azioni per la manipolazione della scena — senza dover alterare la firma dei metodi dell'Hub o la struttura del protocollo sottostante.
+
+\subsection{Orchestrazione dei Comandi Server-Side}
+
+Nel contesto dell'integrazione con l'architettura MCP, il flusso di comunicazione predominante è quello **Server-verso-Client**. Il server assume il ruolo di orchestratore, traducendo gli intenti dell'agente AI in direttive esecutive per il visualizzatore grafico.
+
+L'invio dei comandi è centralizzato nel metodo \texttt{SendHubMessage}, che agisce come unico punto di uscita verso il client connesso. In questo scenario, il modello di comunicazione è prettamente imperativo: il server invia un pacchetto contenente l'azione e i parametri necessari (ad esempio, l'ID di un progetto da aprire o il codice di un articolo da inserire), e il client grafico agisce come esecutore passivo, aggiornando il rendering in risposta allo stimolo ricevuto.
+
+Sebbene l'architettura SignalR supporti nativamente la bidirezionalità, nel design attuale questa capacità è riservata principalmente al feedback di stato (Acknowledgment). Il client, una volta completata l'operazione grafica richiesta (che potrebbe richiedere tempi non trascurabili per il caricamento degli asset), può notificare al server l'avvenuta esecuzione, chiudendo il cerchio logico dell'operazione senza necessitare di complessi meccanismi di interrogazione sincrona dello stato client-side.
+
 \section{Flussi di Lavoro Principali}
 \label{sec:flussi-lavoro}
 %----------------------------------------------------------------------------------------
@@ -1938,6 +1960,19 @@ L'adozione del Command Pattern per incapsulare questa logica complessa all'inter
 %
 % Diagramma: sequence_1_login_getprojects.mmd
 % Pagine stimate: 2
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/LogineRecuperoProgetti.png}
+    \caption{Diagramma di sequenza del flusso di autenticazione e recupero progetti: gestione intelligente del token e delle credenziali.}
+    \label{fig:sequence-login-simplified}
+\end{figure}
+
+Il primo diagramma di sequenza illustra l'orchestrazione fondamentale delle interazioni tra l'agente AI e il sistema gestionale esterno, delineando due macro-fasi operative: l'autenticazione iniziale e il successivo accesso alle risorse.
+
+La prima fase descrive il processo di login, caratterizzato da una logica di flessibilità operativa. Il sistema è progettato per gestire sia l'inserimento esplicito delle credenziali da parte dell'utente sia, in loro assenza, il recupero automatico dei parametri di accesso predefiniti dai file di configurazione. Una volta inviata la richiesta al backend remoto e ottenuta una risposta positiva, il token di sicurezza (JWT) viene estratto e persistito in una variabile statica. Questa scelta architetturale garantisce il mantenimento della sessione per le operazioni future, riducendo la necessità di autenticazioni ridondanti. Parallelamente, il successo dell'operazione viene notificato al servizio di comunicazione in tempo reale.
+
+La seconda parte del diagramma espone il flusso di recupero dell'elenco progetti. Prima di interrogare l'API esterna, il modulo verifica preventivamente la validità del token di autenticazione, innescando una procedura di rinnovo automatico qualora questo risultasse assente o scaduto. La richiesta viene quindi inoltrata corredata dagli header di autorizzazione necessari; la risposta grezza fornita dal server viene infine deserializzata e mappata in una struttura dati semplificata, ottimizzata per essere elaborata dall'assistente intelligente. Il diagramma evidenzia inoltre la gestione degli scenari di errore, come credenziali invalide o sessioni scadute, garantendo che l'agente riceva sempre un feedback coerente sullo stato dell'operazione.
 
 %----------------------------------------------------------------------------------------
 \subsection{Caso d'Uso: Creazione e Apertura Progetto}
@@ -1963,8 +1998,20 @@ L'adozione del Command Pattern per incapsulare questa logica complessa all'inter
 %
 % Diagramma: sequence_2_create_open_project.mmd
 % Pagine stimate: 2-3
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CreazioneeAperturaProgetto.png}
+    \caption{Diagramma di sequenza del flusso di creazione e apertura progetto: orchestrazione tra API REST e canale SignalR.}
+    \label{fig:sequence-create-open}
+\end{figure}
+Il secondo diagramma di sequenza approfondisce le dinamiche di interazione mista che caratterizzano le operazioni di modifica della scena. A differenza del semplice recupero dati, queste procedure richiedono un'orchestrazione sincrona tra il livello API (per il recupero delle informazioni) e il canale Real-Time (per l'attuazione dei comandi sul client).
 
-%----------------------------------------------------------------------------------------
+La prima sezione illustra la creazione di un progetto: l'operazione è modellata come un comando push verso il configuratore. Il server MCP non crea direttamente il record nel database, ma istruisce il client grafico — tramite un messaggio strutturato veicolato dal bridge SignalR — affinché presenti all'utente una maschera di creazione precompilata. Questo approccio delega la responsabilità della persistenza finale al client, mantenendo il server MCP nel ruolo di "pilota" remoto.
+
+La seconda sezione descrive l'apertura di un progetto esistente, evidenziando la necessità di una fase preliminare di risoluzione. Poiché l'utente umano tende a riferirsi ai progetti per nome (es. "Cucina Milano"), mentre il sistema richiede identificativi numerici univoci, il server MCP esegue preventivamente una query di ricerca sulle API esterne. Una volta risolto l'ID corretto, viene inviato il comando di apertura al client 3D, il quale si fa carico autonomamente del recupero degli asset pesanti (modelli 3D, texture) e del rendering della scena, confermando al termine il successo dell'operazione.
+
+
+%---------------
 \subsection{Caso d'Uso: Aggiunta Articolo con Varianti}
 \label{subsec:aggiunta-articolo}
 %----------------------------------------------------------------------------------------
@@ -1995,7 +2042,16 @@ L'adozione del Command Pattern per incapsulare questa logica complessa all'inter
 %
 % Diagrammi: diagram_8_sequence_add_article.mmd, sequence_3_add_article_variants.mmd
 % Pagine stimate: 2-3
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/AggiuntaArticoloconVarianti.png}
+    \caption{Diagramma di sequenza del flusso di aggiunta di un articolo con una variante.}
+    \label{fig:sequence-add-article}
+\end{figure}
 
+Il terzo diagramma di sequenza analizza la complessità transazionale legata all'inserimento di un prodotto configurabile. A differenza di una scrittura atomica, questa operazione impone un'orchestrazione a più fasi per garantire l'applicazione corretta delle varianti (il Ruleset).
+
+Dopo una verifica preliminare della sessione di autenticazione, il sistema procede con l'inserimento dell'articolo "neutro" tramite le API del backend gestionale. Ottenuto l'identificativo univoco della riga generata (rowId), il flusso logico valuta la presenza di regole di configurazione. Se presenti, viene attivato il pattern Get-Modify-Save: il tool recupera lo stato di configurazione predefinito dal server remoto, lo elabora in memoria applicando le varianti richieste dall'agente AI e lo persiste nuovamente sul database. Il ciclo si conclude con la fase di sincronizzazione visiva: il server invia un comando via SignalR al client 3D, innescando l'aggiornamento della scena affinché l'utente possa visualizzare immediatamente il nuovo elemento con le finiture applicate.
 %----------------------------------------------------------------------------------------
 \subsection{Caso d'Uso: Comunicazione Bidirezionale}
 \label{subsec:comunicazione-bidirezionale}
@@ -2064,8 +2120,25 @@ L'adozione del Command Pattern per incapsulare questa logica complessa all'inter
 %
 % Diagramma: sequence_5_error_handling.mmd
 % Pagine stimate: 2
+Un aspetto cruciale nella progettazione di un sistema destinato all'interazione con agenti di Intelligenza Artificiale è la qualità del feedback in caso di errore. A differenza di un'interfaccia grafica tradizionale, dove l'utente umano può intuire il problema dal contesto, un agente AI necessita di messaggi di errore strutturati e "azionabili" (actionable) per poter tentare strategie di recupero autonomo. L'architettura proposta implementa una strategia di gestione delle eccezioni divisa in due livelli: la gestione delle anomalie infrastrutturali e la validazione della logica di business.
 
-%----------------------------------------------------------------------------------------
+\subsubsection{Gestione delle Anomalie Infrastrutturali}
+
+\begin{figure}[H]
+\centering \includegraphics[width=0.9\textwidth]{figures/sequence_error_infrastructure} \caption{Gestione degli errori infrastrutturali: scadenza token e indisponibilità del servizio SignalR.} \label{fig:seq-error-infra}
+\end{figure}
+Il primo livello di difesa riguarda la stabilità del canale di comunicazione. Poiché il sistema dipende da token di sessione volatili e da connessioni WebSocket persistenti, è fisiologico che possano verificarsi interruzioni di servizio. Il diagramma seguente illustra due scenari critici: \begin{enumerate} \item Scadenza della Sessione: Se il token di sicurezza scade durante l'operatività, il middleware intercetta l'errore HTTP 401 e restituisce all'agente non un semplice fallimento, ma un suggerimento esplicito per effettuare il rinnovo delle credenziali. \item Indisponibilità del Canale Real-Time: Prima di inviare comandi grafici, il sistema verifica proattivamente lo stato del bridge SignalR. Se il servizio non è raggiungibile, l'operazione viene abortita preventivamente, evitando di lasciare l'AI in attesa di un feedback che non arriverebbe mai. \end{enumerate}
+
+
+
+\subsubsection{Validazione Logica e Integrità dei Dati}
+
+\begin{figure}[H] \centering \includegraphics[width=0.9\textwidth]{figures/sequence_error_logic} \caption{Gestione degli errori logici: entità non trovate e fallimenti parziali nella configurazione.} \label{fig:seq-error-logic} \end{figure}
+
+Il secondo livello di gestione riguarda la coerenza semantica delle richieste. Quando l'agente AI tenta di operare su entità inesistenti o fornisce parametri non conformi alle regole del configuratore, il sistema risponde con errori arricchiti di metadati contestuali.
+
+Il diagramma successivo evidenzia come il sistema guidi l'agente verso la correzione dell'errore: \begin{enumerate} \item Gestione "Not Found": Nel caso di ricerca di un progetto inesistente, il sistema non si limita a restituire un codice 404, ma fornisce una lista parziale di progetti validi simili, permettendo all'LLM di correggere eventuali errori di "allucinazione" sul nome. \item Fallimenti Parziali (Partial Success): Uno scenario complesso riguarda l'inserimento di articoli con varianti invalide. In questo caso, il sistema adotta una politica di best-effort: l'articolo base viene inserito correttamente, ma l'applicazione delle varianti errate viene segnalata come warning. Questo approccio evita il rigetto totale di operazioni lunghe e costose, informando puntualmente l'agente su quale specifico parametro ha causato l'anomalia. \end{enumerate}
+
 \chapter{Implementazione}
 \label{chap:implementazione}
 %----------------------------------------------------------------------------------------
